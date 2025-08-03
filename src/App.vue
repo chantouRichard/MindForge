@@ -12,6 +12,8 @@ const repositoryStore = useRepositoryStore();
 let hasNavigated = false;
 
 onMounted(async () => {
+  // document.title = "";
+
   window.electronAPI.onFsChanged((path) => {
     console.log("渲染进程收到 fs-changed:", path);
     store.markDirty();
@@ -43,6 +45,10 @@ onMounted(async () => {
     }
   }
 });
+// window.addEventListener('blur', () => {
+//   document.title = "";
+// });
+
 
 const getLastOpenTime = async () => {
   return window.electronAPI.getLastOpenTime();
@@ -71,7 +77,7 @@ body,
   overflow: hidden; /* 禁止整体滚动条 */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; /* 通用系统字体 */
-  background-color: #fff; /* 默认白背景，按需改 */
+    background: transparent !important;
   color: #333; /* 文字基础色 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

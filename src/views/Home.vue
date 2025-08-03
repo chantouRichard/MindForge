@@ -51,6 +51,7 @@ import markdownArea from "../components/home/markdownArea.vue";
 import pictureArea from "../components/home/pictureArea.vue";
 import PDFArea from "../components/home/PDFArea.vue";
 import MindMapArea from "../components/home/MindMapArea.vue";
+import inspirationArea from "../components/home/main-area/inspirationArea.vue";
 import FloatingAIChat from "../components/home/FloatingAIChat.vue";
 
 import { useRepositoryStore } from "../store/repository";
@@ -79,8 +80,11 @@ function getComponentByExt(tab) {
     case "pdf": {
       return PDFArea;
     }
-    default:
+    case "mindmap":
       return MindMapArea;
+    default: {
+      return inspirationArea;
+    }
   }
 }
 
@@ -93,7 +97,6 @@ async function addTab() {
   await window.electronAPI
     .createFile({ parentPath: path, filename: newFilename })
     .then((res) => {
-      console.log("res: ", res);
       if (res.success) {
         const newId = res.path;
         fileStore.setfilePath(newId);
@@ -174,7 +177,7 @@ const iconMap = {
   ".md": "markdown.png",
   ".markdown": "markdown.png",
   ".txt": "text.png",
-  ".json": "json.png",
+  ".json": "inspiration.svg",
   ".js": "js.png",
   ".canvas": "canvas.png",
   ".java": "java.png",
@@ -183,6 +186,7 @@ const iconMap = {
   ".png": "picture.png",
   ".mindmap": "mindmap.png",
   ".pdf": "pdf.png",
+  ".inspire.json": "inspiration.svg"
   // ...
 };
 

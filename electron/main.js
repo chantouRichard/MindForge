@@ -1,10 +1,21 @@
 // main.js
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  globalShortcut,
+  session,
+  screen
+} = require("electron");
 const path = require("path");
 const fs = require("fs");
+const ElectronStore = require("electron-store").default;
+const store = new ElectronStore();
 
 let welcomeWindow = null;
 let homeWindow = null;
+let petWindow = null;
 
 function createWelcomeWindow() {
   welcomeWindow = new BrowserWindow({
@@ -13,9 +24,9 @@ function createWelcomeWindow() {
     resizable: false,
     maximizable: false,
     frame: false, // 无边框窗口
-    icon: path.join(__dirname, 'assets', 'Logo.ico'),
+    icon: path.join(__dirname, "assets", "Logo.ico"),
     webPreferences: {
-      webSecurity: false,  // 关闭安全策略，允许跨域
+      webSecurity: false, // 关闭安全策略，允许跨域
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
@@ -33,7 +44,7 @@ function createHomeWindow() {
     maximizable: true,
     minimizable: true,
     frame: false,
-    icon: path.join(__dirname, 'assets', 'Logo.ico'),
+    icon: path.join(__dirname, "assets", "Logo.ico"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -44,8 +55,57 @@ function createHomeWindow() {
   homeWindow.loadURL("http://localhost:5173/#/home");
 }
 
+function createPetWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width: screenWidth, height: screenHeight } =
+    primaryDisplay.workAreaSize
+
+  petWindow = new BrowserWindow({
+    x: screenWidth - 400,
+    y: 100,
+    width: 300,
+    height: 300,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    hasShadow: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  petWindow.loadURL("http://localhost:5173/#/inspiration");
+}
+
+function togglePetWindow() {
+  if (petWindow) {
+    if (petWindow.isVisible()) {
+      petWindow.hide();
+    } else {
+      petWindow.show();
+    }
+  } else {
+    createPetWindow();
+  }
+}
+
+function registerGlobalShortcut() {
+  const shortcut = store.get("shortcut") || "CommandOrControl+L";
+  const success = globalShortcut.register(shortcut, togglePetWindow);
+
+  if (!success) {
+    console.warn("快捷键注册失败:", shortcut);
+  } else {
+    console.log("注册快捷键:", shortcut);
+  }
+}
+
 app.whenReady().then(() => {
   createWelcomeWindow();
+  registerGlobalShortcut();
   ipcMain.on("minimize-welcome", () => {
     if (welcomeWindow) welcomeWindow.minimize();
   });
@@ -96,16 +156,18 @@ app.whenReady().then(() => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Access-Control-Allow-Origin': ['*'],  // 或者指定你的地址
-      }
-    })
-  })
+        "Access-Control-Allow-Origin": ["*"], // 或者指定你的地址
+      },
+    });
+  });
 });
 
 app.on("window-all-closed", function () {
   if (process.platform !== "darwin") app.quit();
 });
-
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
+});
 ipcMain.handle("dialog:openDirectory", async () => {
   const result = await dialog.showOpenDialog({
     properties: ["openDirectory"],
@@ -139,7 +201,7 @@ function readConfig() {
       recentRepositories: [],
       lastFilePath: "",
       expandedPaths: [],
-      setting:{}
+      setting: {},
     };
   }
   try {
@@ -256,10 +318,10 @@ ipcMain.handle("read-file-title", async (event, filePath) => {
 });
 ipcMain.handle("read-file-content", async (event, filePath) => {
   try {
-    if(filePath.split('.').pop() == 'pdf'){
+    if (filePath.split(".").pop() == "pdf") {
       const buffer = await fs.promises.readFile(filePath); // 不加编码
-    const base64 = buffer.toString("base64");
-    return { success: true, base64 };
+      const base64 = buffer.toString("base64");
+      return { success: true, base64 };
     }
     const content = await fs.promises.readFile(filePath, "utf-8");
     return { success: true, content };
@@ -364,7 +426,7 @@ ipcMain.handle("create-file", async (event, { parentPath, filename }) => {
       await fs.promises.writeFile(fullPath, "# 新建文件", "utf-8");
     } else {
       for (let i = 1; ; i++) {
-          fullPath = path.join(parentPath, filename.split(".")[0] + i + ".md");
+        fullPath = path.join(parentPath, filename.split(".")[0] + i + ".md");
         if (!fs.existsSync(fullPath)) {
           await fs.promises.writeFile(fullPath, "# 新建文件", "utf-8");
           break;
@@ -452,7 +514,10 @@ ipcMain.handle("create-mindmap", async (event, { parentPath, filename }) => {
       await fs.promises.writeFile(fullPath, "", "utf-8");
     } else {
       for (let i = 1; ; i++) {
-          fullPath = path.join(parentPath, filename.split(".")[0] + i + ".mindmap");
+        fullPath = path.join(
+          parentPath,
+          filename.split(".")[0] + i + ".mindmap"
+        );
         if (!fs.existsSync(fullPath)) {
           await fs.promises.writeFile(fullPath, "", "utf-8");
           break;
@@ -467,32 +532,59 @@ ipcMain.handle("create-mindmap", async (event, { parentPath, filename }) => {
 });
 
 // 监听渲染进程请求读取设置
-ipcMain.handle('setting-read', async () => {
+ipcMain.handle("setting-read", async () => {
   const config = readConfig();
   return config.setting || {};
 });
 
 // 监听渲染进程请求写入设置，参数是新的 setting 对象
-ipcMain.handle('setting-write', async (event, newSetting) => {
+ipcMain.handle("setting-write", async (event, newSetting) => {
   const config = readConfig();
-  config.setting = JSON.parse(newSetting);  // 更新 setting 字段
+  config.setting = JSON.parse(newSetting); // 更新 setting 字段
   writeConfig(config);
   return { success: true };
 });
 
-const axios = require('axios')
+const axios = require("axios");
 
-ipcMain.handle('ai-chat-request', async (event, payload) => {
-  console.log("AIAIAIAIAI: ",payload.payload);
+ipcMain.handle("ai-chat-request", async (event, payload) => {
+  console.log("AIAIAIAIAI: ", payload.payload);
   const res = await axios.post(
-    'https://spark-api-open.xf-yun.com/v1/chat/completions',
+    "https://spark-api-open.xf-yun.com/v1/chat/completions",
     payload.payload.data,
     {
       headers: {
         Authorization: `Bearer ${payload.payload.token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     }
-  )
-  return res.data
-})
+  );
+  return res.data;
+});
+
+// 灵感库
+ipcMain.handle("new-inspiration", async (event, filePath, content) => {
+  try {
+    // 检查目录是否存在，不存在就创建
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(filePath, content, "utf-8");
+    return { success: true, message: "文件创建成功" };
+  } catch (error) {
+    console.error("[new-inspiration] 错误:", error);
+    return { success: false, message: "创建失败", error: error.message };
+  }
+});
+
+ipcMain.handle("update-inspiration", async (event, filePath, content) => {
+  try {
+    fs.writeFileSync(filePath, content, "utf-8");
+    return { success: true, message: "更新成功" };
+  } catch (error) {
+    console.error("[update-inspiration] 错误:", error);
+    return { success: false, message: "更新失败", error: error.message };
+  }
+});

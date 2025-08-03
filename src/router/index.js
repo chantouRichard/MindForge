@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 import Home from "../views/Home.vue";
 import Welcome from "../views/Welcome.vue";
+import Inspiration from "../views/Inspiration.vue";
 
 const routes = [
   {
@@ -13,6 +14,11 @@ const routes = [
     name: "Home",
     component: Home,
   },
+  {
+    path:"/inspiration",
+    name:"Inspiration",
+    component: Inspiration
+  }
   // 可以继续添加其他页面
 ];
 

@@ -12,7 +12,19 @@
       </div>
 
       <div style="display: flex; width: 100%; height: calc(100% - 40px)">
-        <div class="left-panel-toolbar"></div>
+        <div class="left-panel-toolbar">
+          <div
+            class="left-panel-button-container"
+            v-for="(btn, index) in toolbarLeftButtons"
+            :key="index"
+            @click="clickButton(index)"
+            @mouseenter="btn.showtip = true"
+            @mouseleave="btn.showtip = false"
+          >
+            <img :src="btn.icon" class="left-panel-button" />
+            <TooltipWrapper :text="btn.alt" :show="btn.showtip" />
+          </div>
+        </div>
         <div
           style="
             display: flex;
@@ -49,7 +61,7 @@
               />
             </div>
           </div>
-          <div style="flex: 1;overflow: auto;" ref="fileTree">
+          <div style="flex: 1; overflow: auto" ref="fileTree">
             <div class="file-tree">
               <TreeItem
                 v-for="item in treeData"
@@ -63,8 +75,16 @@
             </div>
           </div>
           <div class="file-tree-bottom">
-            <div class="left-panel-button-container" style="position: absolute;right: 8px;" @click="showSettingPage">
-            <img src="../../assets/home/left-panel/setting.png" class="left-panel-button"/></div>
+            <div
+              class="left-panel-button-container"
+              style="position: absolute; right: 8px"
+              @click="showSettingPage"
+            >
+              <img
+                src="../../assets/home/left-panel/setting.png"
+                class="left-panel-button"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -78,21 +98,68 @@
     :onSelect="handleMenuSelect"
     :targetNode="rightClickedNode"
   />
-  <Setting v-if="showSetting" @close="showSetting = false"/>
+  <Setting v-if="showSetting" @close="showSetting = false" />
 </template>
 
 <script setup>
 import { ref, watch } from "vue";
 import TreeItem from "./TreeItem.vue"; // 自定义组件
+import TooltipWrapper from "./TooltipWrapper.vue";
 
 // 设置界面展示
 import Setting from "./Setting.vue";
 const showSetting = ref(false);
-const showSettingPage = () =>{
+const showSettingPage = () => {
   showSetting.value = true;
-}
+};
 
+// 按钮配置
+import inspirationIcon from "../../assets/home/left-panel/inspiration.svg";
+const toolbarLeftButtons = ref([
+  { icon: inspirationIcon, alt: "灵感", showtip: false },
+]);
 
+// 灵感库
+import { useRepositoryStore } from "../../store/repository";
+const repositoryStore = useRepositoryStore();
+const clickButton = (index) => {
+  switch (index) {
+    case 0: {
+      repositoryStore.loadRepositories();
+
+      const inspirationPath = `${repositoryStore.recentRepositories[0].path}\\.mindforge\\灵感库.inspire.json`;
+
+      window.electronAPI.readFileContent(inspirationPath).then((res) => {
+        if (res.success) {
+          fileStore.filePath = inspirationPath;
+        } else {
+          const initContent = {
+            inspirations: [
+              {
+                tag: "新建灵感库",
+                inspirations: [
+                  {
+                    title: "灵感小标题",
+                    content: "每天可以花两个小时学习视频剪辑，帮助肯定很大",
+                  },
+                ],
+              },
+            ],
+          };
+          window.electronAPI
+            .newInspiration(inspirationPath, JSON.stringify(initContent))
+            .then((res) => {
+              if (res.success) {
+                ElMessage.success("灵感库创建成功");
+                fileStore.filePath = inspirationPath;
+              }
+            });
+        }
+      });
+      break;
+    }
+  }
+};
 
 const props = defineProps({
   path: String,
@@ -240,10 +307,11 @@ import folderIcon from "../../assets/home/left-panel/folder.png";
 import deleteIcon from "../../assets/home/left-panel/delete.png";
 import renameIcon from "../../assets/home/left-panel/rename.png";
 import mindmapIcon from "../../assets/home/left-panel/mindmap.png";
+import { ElMessage } from "element-plus";
 
 const menuItems = ref([
   { label: "新建文件", icon: fileIcon },
-  {label:"新建思维导图",icon:mindmapIcon},
+  { label: "新建思维导图", icon: mindmapIcon },
   { label: "新建文件夹", icon: folderIcon },
   { label: "重命名", icon: renameIcon },
   { label: "删除", icon: deleteIcon },
@@ -349,6 +417,15 @@ const expandAndCollapse = () => {
 
   border-right: #ccc solid 1px;
   flex-shrink: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: flex-start;
+
+  padding-top: 4px;
+  gap: 4px;
 }
 .file-tree-toolbar {
   height: 40px;

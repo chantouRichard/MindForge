@@ -16,3 +16,7 @@ app.use(router)
 app.mount('#app')
 
 console.warn = () => {};
+
+// window.addEventListener('blur', () => {
+//   document.title = "";
+// });

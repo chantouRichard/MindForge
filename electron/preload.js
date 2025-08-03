@@ -18,30 +18,35 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createRepository: (data) => ipcRenderer.invoke("create-repository", data),
 
   // 读取目录
-  readDirectory: (path) => ipcRenderer.invoke('read-directory', path),
-  startWatch: (path) => ipcRenderer.invoke('startWatch', path),
-  onFsChanged: (callback) => ipcRenderer.on('fs-changed', (_, path) => callback(path)),
+  readDirectory: (path) => ipcRenderer.invoke("read-directory", path),
+  startWatch: (path) => ipcRenderer.invoke("startWatch", path),
+  onFsChanged: (callback) =>
+    ipcRenderer.on("fs-changed", (_, path) => callback(path)),
 
   // 读取文件内容
-  readFileTitle: (path) => ipcRenderer.invoke('read-file-title', path),
-  readFileContent: (path) => ipcRenderer.invoke('read-file-content', path),
+  readFileTitle: (path) => ipcRenderer.invoke("read-file-title", path),
+  readFileContent: (path) => ipcRenderer.invoke("read-file-content", path),
 
   // 保存文件
-  saveFileContent: ({filePath, content}) => ipcRenderer.invoke('save-file-content', {filePath, content}),
-  renameFile: ({oldPath, newName}) => ipcRenderer.invoke('rename-file', {oldPath, newName}),
-  renameFolder: ({oldPath, newName}) => ipcRenderer.invoke('rename-folder', {oldPath, newName}),
+  saveFileContent: ({ filePath, content }) =>
+    ipcRenderer.invoke("save-file-content", { filePath, content }),
+  renameFile: ({ oldPath, newName }) =>
+    ipcRenderer.invoke("rename-file", { oldPath, newName }),
+  renameFolder: ({ oldPath, newName }) =>
+    ipcRenderer.invoke("rename-folder", { oldPath, newName }),
 
   // 存储最后打开的文件
-  saveLastFilePath: (path) => ipcRenderer.invoke('save-last-file-path', path),
-  getLastFilePath: () => ipcRenderer.invoke('get-last-file-path'),
+  saveLastFilePath: (path) => ipcRenderer.invoke("save-last-file-path", path),
+  getLastFilePath: () => ipcRenderer.invoke("get-last-file-path"),
 
   // 存储文件展开情况
-  saveExpandedPaths: (paths) => ipcRenderer.invoke('save-expanded-paths', paths),
-  getExpandedPaths: () => ipcRenderer.invoke('get-expanded-paths'),
+  saveExpandedPaths: (paths) =>
+    ipcRenderer.invoke("save-expanded-paths", paths),
+  getExpandedPaths: () => ipcRenderer.invoke("get-expanded-paths"),
 
   // 上次打开时间
-  saveLastOpenTime: (time) => ipcRenderer.invoke('save-last-open-time', time),
-  getLastOpenTime: () => ipcRenderer.invoke('get-last-open-time'),
+  saveLastOpenTime: (time) => ipcRenderer.invoke("save-last-open-time", time),
+  getLastOpenTime: () => ipcRenderer.invoke("get-last-open-time"),
 
   // 新建文件
   createFile: (options) => ipcRenderer.invoke("create-file", options),
@@ -50,21 +55,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteFolder: (path) => ipcRenderer.invoke("delete-folder", path),
 
   // 读取图片
-  loadLocalImage: (imagePath) => ipcRenderer.invoke("load-local-image", imagePath),
+  loadLocalImage: (imagePath) =>
+    ipcRenderer.invoke("load-local-image", imagePath),
 
   // 新建思维导图
   createMindMap: (options) => ipcRenderer.invoke("create-mindmap", options),
 
-  settingWrite: (newSetting) => ipcRenderer.invoke('setting-write', newSetting),
-  settingRead: () => ipcRenderer.invoke('setting-read'),
+  settingWrite: (newSetting) => ipcRenderer.invoke("setting-write", newSetting),
+  settingRead: () => ipcRenderer.invoke("setting-read"),
 
   // AI 聊天
-  AIChatRequest: (payload) => ipcRenderer.invoke('ai-chat-request', payload),
+  AIChatRequest: (payload) => ipcRenderer.invoke("ai-chat-request", payload),
+
+  // 灵感库
+  newInspiration: (path, content) =>
+    ipcRenderer.invoke("new-inspiration", path, content),
+  updateInspiration: (path, content) =>
+    ipcRenderer.invoke("update-inspiration", path, content),
 });
 
 // 仓库管理
-contextBridge.exposeInMainWorld('repositoryAPI', {
-  getRepositories: () => ipcRenderer.invoke('get-repositories'),
-  addRepository: (path) => ipcRenderer.invoke('add-repository', path),
-  removeRepository: (path) => ipcRenderer.invoke('remove-repository', path),
+contextBridge.exposeInMainWorld("repositoryAPI", {
+  getRepositories: () => ipcRenderer.invoke("get-repositories"),
+  addRepository: (path) => ipcRenderer.invoke("add-repository", path),
+  removeRepository: (path) => ipcRenderer.invoke("remove-repository", path),
 });

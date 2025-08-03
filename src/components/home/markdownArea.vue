@@ -183,92 +183,71 @@ const handleAction = (action) => {
     exportToPDF();
   }
 };
-import jsPDF from "jspdf";
+// 导出为PDF
 import { marked } from "marked";
-import "../../utils/NotoSansSC-Regular-normal.js"; // 确保这里能正确 import 到注册字体的文件
-import "../../utils/SimHei-normal.js";
-import "../../utils/SimHei-bold.js"
-// await import("/fonts/NotoSansSC-Regular-normal.js");
+import html2pdf from "html2pdf.js";
+
+// 导出为PDF
 const exportToPDF = () => {
   const markdownText = vditor.getValue();
   const htmlContent = marked(markdownText);
 
-  const doc = new jsPDF({
-    unit: "mm",
-    format: "a4",
-    orientation: "portrait"
+  // 创建临时容器
+  const tempDiv = document.createElement("div");
+  tempDiv.style.padding = "20px";
+  tempDiv.style.fontFamily = "Arial, sans-serif";
+
+  // 插入标题
+  const titleElement = document.createElement("h1");
+  titleElement.innerText = title.value;
+  titleElement.style.textAlign = "center";
+  titleElement.style.marginBottom = "20px";
+  tempDiv.appendChild(titleElement);
+
+  // 插入内容
+  const contentDiv = document.createElement("div");
+  contentDiv.innerHTML = htmlContent;
+  tempDiv.appendChild(contentDiv);
+
+  // 添加到 DOM 并生成 PDF
+  document.body.appendChild(tempDiv);
+
+  // 设置 h1 字体缩小 4px（以默认样式为基础减小）
+  const style = document.createElement("style");
+  style.innerHTML = `
+  h1 {
+    font-size: calc(2em - 4px);
+  }
+`;
+  tempDiv.appendChild(style);
+
+  // 避免分页分割段落
+  const paragraphs = tempDiv.querySelectorAll(
+    "p, h1, h2, h3, h4, h5, h6, ul, ol, pre, blockquote"
+  );
+  paragraphs.forEach((el) => {
+    el.style.pageBreakInside = "avoid";
   });
 
-  const titleText = title.value || "文档标题";
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginLeft = 20;
-  const marginRight = 20;
-  const contentWidth = pageWidth - marginLeft - marginRight;
-  let y = 20;
+  document.body.appendChild(tempDiv);
 
-  // 正确设置字体名称为你转换时注册的字体名
-  doc.setFont("SimHei", "normal");
-  doc.setFontSize(20);
-  const titleWidth = doc.getTextWidth(titleText);
-  doc.text(titleText, (pageWidth - titleWidth) / 2, y);
-  y += 15;
-
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = htmlContent;
-  const paragraphs = tempDiv.querySelectorAll("p, li, h1, h2, h3, pre");
-
-  doc.setFont("SimHei", "normal");
-  doc.setFontSize(12);
-
-  paragraphs.forEach((el) => {
-  const text = el.innerText.trim();
-  if (!text) return;
-
-  // 设置样式：根据标签设定大小和粗细
-  let fontSize = 12;
-  let isBold = false;
-
-  switch (el.tagName.toLowerCase()) {
-    case "h1":
-      fontSize = 18;
-      isBold = true;
-      break;
-    case "h2":
-      fontSize = 16;
-      isBold = true;
-      break;
-    case "h3":
-      fontSize = 14;
-      isBold = true;
-      break;
-    case "li":
-      // 加上序号或项目符号
-      el.innerText = (el.parentElement.tagName.toLowerCase() === 'ol' ? '• ' : '• ') + el.innerText;
-      break;
-    case "pre":
-      fontSize = 10;
-      isBold = false;
-      break;
-  }
-
-  doc.setFont("SimHei", isBold ? "bold" : "normal");
-  doc.setFontSize(fontSize);
-
-  const lines = doc.splitTextToSize(el.innerText, contentWidth);
-  if (y + lines.length * (fontSize + 2) > 280) {
-    doc.addPage();
-    y = 20;
-  }
-
-  doc.text(lines, marginLeft, y);
-  y += lines.length * (fontSize + 2);
-});
-
-
-  doc.save(`${titleText}.pdf`);
+  html2pdf()
+    .from(tempDiv)
+    .set({
+      margin: 10,
+      filename: `${title.value}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: {
+        mode: ["avoid-all"],
+      },
+    })
+    .save()
+    .then(() => {
+      document.body.removeChild(tempDiv);
+    });
 };
-
-
 
 // 点击空白处关闭菜单
 const handleClickOutside = (event) => {

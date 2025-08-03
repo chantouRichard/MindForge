@@ -136,7 +136,7 @@ const iconMap = {
   ".md": "markdown.png",
   ".markdown": "markdown.png",
   ".txt": "text.png",
-  ".json": "json.png",
+  ".json": "inspiration.svg",
   ".js": "js.png",
   ".canvas": "canvas.png",
   ".java": "java.png",
@@ -145,6 +145,7 @@ const iconMap = {
   ".png": "picture.png",
   ".mindmap": 'mindmap.png',
   ".pdf": 'pdf.png',
+  ".inspire.json": 'inspiration.svg'
   // ...
 };
 
