@@ -1,7 +1,7 @@
 <template>
   <div class="inspiration-area">
     <h2 style="margin-right: auto; margin-left: 20px; display: flex">灵感库</h2>
-    <div class="folder-area">
+    <!-- <div class="folder-area">
       <div class="folder-list">
         <div
           v-for="(folder, index) in inspirationData"
@@ -13,14 +13,14 @@
           {{ folder.tag }}
         </div>
       </div>
-    </div>
+    </div> -->
 
-    <div class="inspiration-list" v-if="selectedFolder">
-      <h3>{{ selectedFolder.tag }}</h3>
+    <div class="inspiration-list" v-if="selected">
+      <h3>{{ selected.tag }}</h3>
       <div class="inspiration-grid">
         <div
           class="inspiration-card"
-          v-for="(item, idx) in selectedFolder.inspirations"
+          v-for="(item, idx) in selected.inspirations"
           :key="idx"
         >
           <h4>{{ item.title }}</h4>
@@ -28,43 +28,54 @@
         </div>
       </div>
     </div>
+    <div v-else style="font-size: 18px;font-weight: bold;color:#4D4F69;margin-top: 10%;display: flex;flex-direction: column;align-items: center;gap: 8px;">
+      <img :src="inspirationIcon" alt="" style="width: 100px;height: 100px;object-fit: cover;" />
+      这里是属于你自己的灵感库<br>平时可以把思考的点点滴滴都记录下来<br>都会保存到这里
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useFileStore } from "../../../store/file";
 import { ElMessage } from "element-plus";
+import inspirationIcon from "../../../assets/home/left-panel/inspiration.svg";
 
 const fileStore = useFileStore();
 
 const inspirationData = ref([]);
 const selectedFolderIndex = ref(0);
 
-const selectedFolder = computed(() => {
-  return inspirationData.value[selectedFolderIndex.value] || null;
-});
+const selected = ref(null);
 
 onMounted(async () => {
-  if (!fileStore.filePath) {
-    ElMessage.error("文件路径为空");
-    return;
-  }
-
-  try {
-    const res = await window.electronAPI.readFileContent(fileStore.filePath);
-    if (res.success) {
-      const parsed = JSON.parse(res.content);
-      inspirationData.value = parsed.inspirations || [];
-      ElMessage.success("灵感库加载成功");
-    } else {
-      ElMessage.error("读取灵感库失败");
-    }
-  } catch (err) {
-    ElMessage.error("读取灵感库异常");
-    console.error(err);
-  }
+  // if (!fileStore.filePath) {
+  //   ElMessage.error("文件路径为空");
+  //   return;
+  // }
+  // try {
+  //   const res = await window.electronAPI.readFileContent(fileStore.filePath);
+  //   if (res.success) {
+  //     const parsed = JSON.parse(res.content);
+  //     inspirationData.value = parsed.inspirations || [];
+  //     ElMessage.success("灵感库加载成功");
+  //   } else {
+  //     ElMessage.error("读取灵感库失败");
+  //   }
+  // } catch (err) {
+  //   ElMessage.error("读取灵感库异常");
+  //   console.error(err);
+  // }
 });
+
+watch(
+  () => fileStore.InspirationContent,
+  (newVal) => {
+    console.log("newVal: ", newVal);
+    selected.value = newVal;
+  }
+);
+
 </script>
 
 <style scoped>
@@ -137,5 +148,4 @@ onMounted(async () => {
   width: 100%;
   box-sizing: border-box;
 }
-
 </style>

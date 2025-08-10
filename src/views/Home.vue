@@ -52,6 +52,7 @@ import pictureArea from "../components/home/pictureArea.vue";
 import PDFArea from "../components/home/PDFArea.vue";
 import MindMapArea from "../components/home/MindMapArea.vue";
 import inspirationArea from "../components/home/main-area/inspirationArea.vue";
+import ScheduleArea from "../components/home/main-area/ScheduleArea.vue";
 import FloatingAIChat from "../components/home/FloatingAIChat.vue";
 
 import { useRepositoryStore } from "../store/repository";
@@ -82,8 +83,10 @@ function getComponentByExt(tab) {
     }
     case "mindmap":
       return MindMapArea;
+    case "json":
+      return inspirationArea
     default: {
-      return inspirationArea;
+      return ScheduleArea;
     }
   }
 }

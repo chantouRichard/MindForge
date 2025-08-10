@@ -21,8 +21,8 @@
             @mouseenter="btn.showtip = true"
             @mouseleave="btn.showtip = false"
           >
-            <img :src="btn.icon" class="left-panel-button" />
             <TooltipWrapper :text="btn.alt" :show="btn.showtip" />
+            <img :src="btn.icon" class="left-panel-button" />
           </div>
         </div>
         <div
@@ -33,48 +33,56 @@
             height: 100%;
           "
         >
-          <div class="file-tree-toolbar">
-            <div class="left-panel-button-container">
-              <img
-                class="left-panel-button"
-                src="../../assets/home/left-panel/file.png"
-              />
+          <div class="left-panel-main-area" v-if="mode === 'notes'">
+            <div class="file-tree-toolbar">
+              <div class="left-panel-button-container">
+                <img
+                  class="left-panel-button"
+                  src="../../assets/home/left-panel/file.png"
+                />
+              </div>
+              <div class="left-panel-button-container">
+                <img
+                  class="left-panel-button"
+                  style="width: 22px; height: 22px"
+                  src="../../assets/home/left-panel/folder.png"
+                />
+              </div>
+              <div class="left-panel-button-container">
+                <img
+                  class="left-panel-button"
+                  src="../../assets/home/left-panel/sort.png"
+                />
+              </div>
+              <div class="left-panel-button-container">
+                <img
+                  class="left-panel-button"
+                  src="../../assets/home/left-panel/unshow.png"
+                  :class="{ toggle: directoryStore.isCollapse }"
+                />
+              </div>
             </div>
-            <div class="left-panel-button-container">
-              <img
-                class="left-panel-button"
-                style="width: 22px; height: 22px"
-                src="../../assets/home/left-panel/folder.png"
-              />
-            </div>
-            <div class="left-panel-button-container">
-              <img
-                class="left-panel-button"
-                src="../../assets/home/left-panel/sort.png"
-              />
-            </div>
-            <div class="left-panel-button-container">
-              <img
-                class="left-panel-button"
-                src="../../assets/home/left-panel/unshow.png"
-                :class="{ toggle: directoryStore.isCollapse }"
-              />
+            <div style="flex: 1; overflow: auto" ref="fileTree">
+              <div class="file-tree">
+                <TreeItem
+                  v-for="item in treeData"
+                  :key="item.path"
+                  :item="item"
+                  :expanded-paths="expandedPaths"
+                  @toggle="handleToggle"
+                  @contextmenu="onRightClick(node, $event)"
+                  :force-expand-collapse="forceExpandCollapse"
+                />
+              </div>
             </div>
           </div>
-          <div style="flex: 1; overflow: auto" ref="fileTree">
-            <div class="file-tree">
-              <TreeItem
-                v-for="item in treeData"
-                :key="item.path"
-                :item="item"
-                :expanded-paths="expandedPaths"
-                @toggle="handleToggle"
-                @contextmenu="onRightClick(node, $event)"
-                :force-expand-collapse="forceExpandCollapse"
-              />
-            </div>
+          <div class="left-panel-main-area" v-else-if="mode === 'inspiration'">
+            <InspirationTagList />
           </div>
-          <div class="file-tree-bottom">
+          <div class="left-panel-main-area" v-else-if="mode === 'schedule'">
+            <SchedulePanel />
+          </div>
+          <div class="left-panel-bottom">
             <div
               class="left-panel-button-container"
               style="position: absolute; right: 8px"
@@ -104,6 +112,8 @@
 <script setup>
 import { ref, watch } from "vue";
 import TreeItem from "./TreeItem.vue"; // 自定义组件
+import InspirationTagList from "./left-panel/InspirationTagList.vue";
+import SchedulePanel from "./left-panel/SchedulePanel.vue";
 import TooltipWrapper from "./TooltipWrapper.vue";
 
 // 设置界面展示
@@ -114,9 +124,18 @@ const showSettingPage = () => {
 };
 
 // 按钮配置
+import notesIcon from "../../assets/home/left-panel/notes.svg";
 import inspirationIcon from "../../assets/home/left-panel/inspiration.svg";
+import progressIcon from "../../assets/home/left-panel/progress.svg";
+import scheduleIcon from "../../assets/home/left-panel/schedule.svg";
+import achievementIcon from "../../assets/home/left-panel/achievement.svg";
+const mode = ref("notes");
 const toolbarLeftButtons = ref([
+  { icon: notesIcon, alt: "笔记", showtip: false },
   { icon: inspirationIcon, alt: "灵感", showtip: false },
+  { icon: progressIcon, alt: "进度", showtip: false },
+  { icon: scheduleIcon, alt: "计划", showtip: false },
+  { icon: achievementIcon, alt: "成就", showtip: false },
 ]);
 
 // 灵感库
@@ -125,37 +144,23 @@ const repositoryStore = useRepositoryStore();
 const clickButton = (index) => {
   switch (index) {
     case 0: {
-      repositoryStore.loadRepositories();
-
-      const inspirationPath = `${repositoryStore.recentRepositories[0].path}\\.mindforge\\灵感库.inspire.json`;
-
-      window.electronAPI.readFileContent(inspirationPath).then((res) => {
-        if (res.success) {
-          fileStore.filePath = inspirationPath;
-        } else {
-          const initContent = {
-            inspirations: [
-              {
-                tag: "新建灵感库",
-                inspirations: [
-                  {
-                    title: "灵感小标题",
-                    content: "每天可以花两个小时学习视频剪辑，帮助肯定很大",
-                  },
-                ],
-              },
-            ],
-          };
-          window.electronAPI
-            .newInspiration(inspirationPath, JSON.stringify(initContent))
-            .then((res) => {
-              if (res.success) {
-                ElMessage.success("灵感库创建成功");
-                fileStore.filePath = inspirationPath;
-              }
-            });
-        }
-      });
+      mode.value = "notes";
+      break;
+    }
+    case 1: {
+      mode.value = "inspiration";
+      break;
+    }
+    case 2: {
+      mode.value = "progress";
+      break;
+    }
+    case 3: {
+      mode.value = "schedule";
+      break;
+    }
+    case 4: {
+      mode.value = "achievement";
       break;
     }
   }
@@ -425,7 +430,7 @@ const expandAndCollapse = () => {
   justify-content: flex-start;
 
   padding-top: 4px;
-  gap: 4px;
+  gap: 12px;
 }
 .file-tree-toolbar {
   height: 40px;
@@ -448,6 +453,7 @@ const expandAndCollapse = () => {
   border-radius: 4px;
 
   -webkit-app-region: no-drag;
+  position: relative;
 }
 .left-panel-button {
   width: 18px;
@@ -460,6 +466,13 @@ const expandAndCollapse = () => {
 .left-panel-button.toggle {
   transform: rotate(180deg);
 }
+.left-panel-main-area {
+  flex: 1;
+  height: calc(100% - 50px);
+
+  display: flex;
+  flex-direction: column;
+}
 .file-tree {
   font-size: 14px;
   padding: 10px;
@@ -467,7 +480,7 @@ const expandAndCollapse = () => {
 
   height: 100%;
 }
-.file-tree-bottom {
+.left-panel-bottom {
   width: 100%;
   height: 50px;
 

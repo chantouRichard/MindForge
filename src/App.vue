@@ -24,12 +24,9 @@ onMounted(async () => {
   let duringSeconds = Math.floor((Date.now() - lastOpenTime) / 1000);
   let duringMinutes = Math.floor(duringSeconds / 60);
   let duringHours = Math.floor(duringMinutes / 60);
+  let duringDays = Math.floor(duringHours / 24);
 
-  console.log("距离上次打开已经过了：", duringSeconds, "seconds");
-  console.log("距离上次打开已经过了：", duringMinutes, "minutes");
-  console.log("距离上次打开已经过了：", duringHours, "hours");
-
-  if (!hasNavigated && duringMinutes < 2) {
+  if (!hasNavigated && duringDays <= 7) {
     let repository = await window.repositoryAPI.getRepositories();
     let repositoryPath = repository[0].path;
     let repositoryName = repositoryPath.split("\\").pop();

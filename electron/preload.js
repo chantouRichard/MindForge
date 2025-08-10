@@ -70,8 +70,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 灵感库
   newInspiration: (path, content) =>
     ipcRenderer.invoke("new-inspiration", path, content),
-  updateInspiration: (path, content) =>
-    ipcRenderer.invoke("update-inspiration", path, content),
+  saveInspiration: ({ path, saveContent }) =>
+    ipcRenderer.invoke("save-inspiration", { path, saveContent }),
+
+  // 灵感库初始化数据
+  onInitData: (callback) => ipcRenderer.on('init-data', (event, data) => callback(data)),
+  hideInspiration: () => ipcRenderer.invoke("hide-inspiration"),
+  onWindowShow: (callback) => ipcRenderer.on('window-show', callback)
 });
 
 // 仓库管理

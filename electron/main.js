@@ -6,16 +6,17 @@ const {
   dialog,
   globalShortcut,
   session,
-  screen
+  screen,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const ElectronStore = require("electron-store").default;
-const store = new ElectronStore();
 
 let welcomeWindow = null;
 let homeWindow = null;
 let petWindow = null;
+
+const NODE_ENV = process.env.NODE_ENV;
+const isDev = !app.isPackaged;
 
 function createWelcomeWindow() {
   welcomeWindow = new BrowserWindow({
@@ -33,7 +34,13 @@ function createWelcomeWindow() {
     },
   });
 
-  welcomeWindow.loadURL("http://localhost:5173/#/"); // Welcome.vue 路由
+  if (NODE_ENV === "development") {
+    welcomeWindow.loadURL("http://localhost:5173/#/");
+  } else {
+    welcomeWindow.loadFile(path.join(__dirname, "../dist/index.html"), {
+      hash: "/",
+    });
+  }
 }
 
 function createHomeWindow() {
@@ -52,19 +59,28 @@ function createHomeWindow() {
     },
   });
 
-  homeWindow.loadURL("http://localhost:5173/#/home");
+  if (NODE_ENV === "development") {
+    homeWindow.loadURL("http://localhost:5173/#/home");
+  } else {
+    homeWindow.loadFile(path.join(__dirname, "./dist/index.html"), {
+      hash: "/home",
+    });
+  }
+  if (petWindow == null) {
+    createPetWindow();
+  }
 }
 
 function createPetWindow() {
-  const primaryDisplay = screen.getPrimaryDisplay()
+  const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight } =
-    primaryDisplay.workAreaSize
+    primaryDisplay.workAreaSize;
 
   petWindow = new BrowserWindow({
-    x: screenWidth - 400,
+    x: screenWidth - 600,
     y: 100,
-    width: 300,
-    height: 300,
+    width: 560,
+    height: 496,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -72,28 +88,45 @@ function createPetWindow() {
     hasShadow: false,
     autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
-      contextIsolation: false,
+      contextIsolation: true,
+      // devTools: false,
     },
   });
 
-  petWindow.loadURL("http://localhost:5173/#/inspiration");
+  if (NODE_ENV === "development") {
+    petWindow.loadURL("http://localhost:5173/#/inspiration");
+  } else {
+    petWindow.loadFile(path.join(__dirname, "./dist/index.html"), {
+      hash: "/inspiration",
+    });
+  }
+
+  petWindow.on("show", () => {
+    petWindow.webContents.send("window-show");
+  });
 }
 
 function togglePetWindow() {
-  if (petWindow) {
-    if (petWindow.isVisible()) {
-      petWindow.hide();
+  try {
+    if (petWindow) {
+      if (petWindow.isVisible()) {
+        petWindow.hide();
+      } else {
+        petWindow.show();
+      }
     } else {
-      petWindow.show();
+      createPetWindow();
     }
-  } else {
+  } catch (error) {
+    // console.warn("togglePetWindow error:", error);
     createPetWindow();
   }
 }
 
 function registerGlobalShortcut() {
-  const shortcut = store.get("shortcut") || "CommandOrControl+L";
+  const shortcut = "CommandOrControl+L";
   const success = globalShortcut.register(shortcut, togglePetWindow);
 
   if (!success) {
@@ -146,7 +179,6 @@ app.whenReady().then(() => {
       welcomeWindow = null;
       createHomeWindow();
     }
-    console.log("调用GoHOme");
   });
 
   app.on("activate", function () {
@@ -263,7 +295,6 @@ ipcMain.handle("remove-repository", (event, repoPath) => {
 
 // 文件递归树
 ipcMain.handle("read-directory", async (event, dirPath) => {
-  console.log("read-directory: ", dirPath);
   const readDir = (dir) => {
     const items = fs.readdirSync(dir);
     return items.map((item) => {
@@ -277,7 +308,6 @@ ipcMain.handle("read-directory", async (event, dirPath) => {
       };
     });
   };
-  console.log("dirPath: ", dirPath);
 
   return readDir(dirPath);
 });
@@ -290,7 +320,6 @@ const chokidar = require("chokidar");
 let watcher;
 
 ipcMain.handle("startWatch", async (event, dirPath) => {
-  console.log("开始监听");
   if (watcher) {
     watcher.close();
   }
@@ -298,7 +327,6 @@ ipcMain.handle("startWatch", async (event, dirPath) => {
   watcher = chokidar.watch(dirPath, { ignoreInitial: true });
 
   watcher.on("all", (eventName, changedPath) => {
-    console.log("文件系统变动:", eventName, changedPath);
     event.sender.send("fs-changed", dirPath);
   });
 });
@@ -448,7 +476,6 @@ ipcMain.handle("create-folder", async (event, options) => {
       fs.mkdirSync(folderPath, { recursive: true });
       return { success: true, message: "文件夹创建成功", path: folderPath };
     } else {
-      console.log("创建2: ", folderPath + 1);
       for (let i = 1; ; i++) {
         if (!fs.existsSync(folderPath + i)) {
           folderPath = path.join(options.basePath, options.folderName + i);
@@ -548,7 +575,6 @@ ipcMain.handle("setting-write", async (event, newSetting) => {
 const axios = require("axios");
 
 ipcMain.handle("ai-chat-request", async (event, payload) => {
-  console.log("AIAIAIAIAI: ", payload.payload);
   const res = await axios.post(
     "https://spark-api-open.xf-yun.com/v1/chat/completions",
     payload.payload.data,
@@ -579,12 +605,33 @@ ipcMain.handle("new-inspiration", async (event, filePath, content) => {
   }
 });
 
-ipcMain.handle("update-inspiration", async (event, filePath, content) => {
+// 核心逻辑：保存灵感
+ipcMain.handle("save-inspiration", async (event, { path, saveContent }) => {
   try {
-    fs.writeFileSync(filePath, content, "utf-8");
-    return { success: true, message: "更新成功" };
-  } catch (error) {
-    console.error("[update-inspiration] 错误:", error);
-    return { success: false, message: "更新失败", error: error.message };
+    const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+    const { tag, inspiration } = saveContent;
+
+    let group = json.inspirations.find((item) => item.tag === tag);
+    if (group) {
+      group.inspirations.push(inspiration);
+    } else {
+      json.inspirations.push({
+        tag,
+        inspirations: [inspiration],
+      });
+    }
+
+    fs.writeFileSync(path, JSON.stringify(json, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error("保存失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+// 隐藏灵感库
+ipcMain.handle("hide-inspiration", async (event) => {
+  if (petWindow) {
+    petWindow.hide();
   }
 });

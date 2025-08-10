@@ -7,6 +7,7 @@ export const useFileStore = defineStore('file', {
     fileContent: "",
     currentRightSelectedItem:null,
     renamingItem:null,
+    InspirationContent: "",
   }),
   actions: {
     setfilePath(path) {
@@ -24,5 +25,8 @@ export const useFileStore = defineStore('file', {
     setRenamingItem(data) {
       this.renamingItem = data;
     },
+    setInspirationContent(content) {
+      this.InspirationContent = content;
+    }
   }
 });

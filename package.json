@@ -1,8 +1,9 @@
 {
   "name": "mindforge",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "electron/main.js",
+  "type": "module",
   "build": {
     "appId": "com.mindforge.app",
     "productName": "MindForge",
@@ -13,16 +14,22 @@
       "dist",
       "electron",
       "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
-      "!**/.*"
+      "!**/.*",
+      "dist/**/*",
+      "main.js",
+      "package.json"
     ],
     "asar": true,
     "win": {
       "target": "nsis"
-    }
+    },
+    "npmRebuild": false
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:renderer && electron-builder",
+    "build:renderer": "vite build",
+    "build:electron": "electron-builder",
+    "build": "npm run build:renderer && npm run build:electron",
     "start": "cross-env NODE_ENV=development electron .",
     "preview": "vite preview"
   },
@@ -66,7 +73,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "cross-env": "^10.0.0",
-    "electron": "^37.2.4",
+    "electron": "^34.5.8",
     "electron-builder": "^26.0.12",
     "gulp": "^5.0.1",
     "gulp-ttf2woff2": "^5.0.0",
