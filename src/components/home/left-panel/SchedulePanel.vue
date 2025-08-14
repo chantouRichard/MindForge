@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 
 const mode = ref("day");
 const selectedDate = ref(null);
@@ -106,6 +106,7 @@ function handleSelect(data) {
 
   if (mode.value === "day") {
     console.log("选中日期：", date.toLocaleDateString());
+    handleDayChange(date);
     selectedRange.value = [date];
   } else if (mode.value === "week") {
     const start = new Date(date);
@@ -188,28 +189,76 @@ function handleModeClick(val) {
 }
 
 function handleDayChange(val) {
-  console.log("选中的日期：", val);
+  fileStore.setScheduleMode("day");
+  fileStore.setScheduleSelected(val);
 }
 
 function handleWeekChange(val) {
   const startOfWeek = new Date(val);
   const endOfWeek = new Date(val);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
-  console.log(
-    "选中的周：",
-    startOfWeek.toLocaleDateString(),
-    " ~ ",
-    endOfWeek.toLocaleDateString()
-  );
+
+  fileStore.setScheduleMode("week");
+  fileStore.setScheduleSelected(startOfWeek);
 }
 
 function handleMonthChange(val) {
-  console.log("选中的月份：", val);
+  const startOfMonth = new Date(val);
+  fileStore.setScheduleMode("month");
+  fileStore.setScheduleSelected(startOfMonth);
 }
 
 function handleYearChange(val) {
   console.log("选中的年份：", val);
+  const startOfYear = new Date(val);
+  fileStore.setScheduleMode("year");
+  fileStore.setScheduleSelected(startOfYear);
 }
+
+// 读取文件
+import { useRepositoryStore } from "../../../store/repository";
+const repositoryStore = useRepositoryStore();
+import { useFileStore } from "../../../store/file";
+const fileStore = useFileStore();
+
+const scheduleData = ref([]);
+const schedulePath = ref("");
+
+const getScheduleData = async () => {
+    console.log("开始读取计划文件");
+  await repositoryStore.loadRepositories();
+  schedulePath.value = `${repositoryStore.recentRepositories[0].path}\\.mindforge\\我的计划.schedule`;
+
+  window.electronAPI.readFileContent(schedulePath.value).then((res) => {
+    if (res.success) {
+      try {
+        const parsedData = JSON.parse(res.content);
+        scheduleData.value = parsedData;
+        fileStore.filePath = schedulePath.value;
+        fileStore.setSchedules(parsedData);
+      } catch (error) {
+        console.error("解析JSON文件时出错：", error);
+      }
+    } else {
+      console.error("读取文件失败,开始创建文件：", res.message);
+      let content = {
+        schedules:[]
+      }
+      window.electronAPI.newSchedule(schedulePath.value,JSON.stringify(content)).then((res) => {
+        if (res.success) {
+          console.log("创建文件成功");
+          fileStore.filePath = schedulePath.value;
+        } else {
+          console.error("创建文件失败：", res.message);
+        }
+      });
+    }
+  });
+};
+
+onMounted(async () => {
+  await getScheduleData();
+});
 </script>
 
 <style scoped>

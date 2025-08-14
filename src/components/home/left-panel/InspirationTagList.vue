@@ -27,7 +27,6 @@ onMounted(() => {
 import { useRepositoryStore } from "../../../store/repository";
 const repositoryStore = useRepositoryStore();
 import { useFileStore } from "../../../store/file";
-import { ElMessage } from "element-plus";
 const fileStore = useFileStore();
 const getInspirations = async () => {
   repositoryStore.loadRepositories();

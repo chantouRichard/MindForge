@@ -76,7 +76,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 灵感库初始化数据
   onInitData: (callback) => ipcRenderer.on('init-data', (event, data) => callback(data)),
   hideInspiration: () => ipcRenderer.invoke("hide-inspiration"),
-  onWindowShow: (callback) => ipcRenderer.on('window-show', callback)
+  onWindowShow: (callback) => ipcRenderer.on('window-show', callback),
+
+  // 计划管理
+  newSchedule: (path, content) => ipcRenderer.invoke("new-schedule", path, content),
+  saveSchedule: ({path, saveContent}) => ipcRenderer.invoke("save-schedule", {path, saveContent}),
+  saveWeekSchedule: ({path, saveContent}) => ipcRenderer.invoke("save-week-schedule", {path, saveContent}),
+  saveYearSchedule: ({path, saveContent}) => ipcRenderer.invoke("save-year-schedule", {path, saveContent}),
+
+  // 进度管理
+  newProgress: (path, content) => ipcRenderer.invoke("new-progress", path, content),
+  saveProgress: ({path, saveContent}) => ipcRenderer.invoke("save-progress", {path, saveContent}),
+
+  // 影记管理
+  newAnno: (path, content) => ipcRenderer.invoke("new-anno", path, content),
+  saveAnno: ({path, saveContent}) => ipcRenderer.invoke("save-anno", {path, saveContent}),
+  saveAnnoImage: ({memoryId, id, src}) => ipcRenderer.invoke("save-anno-image", { memoryId, id, src }),
+  readAnnoImage: ({memoryId, id}) => ipcRenderer.invoke("read-anno-image", { memoryId, id }),
 });
 
 // 仓库管理

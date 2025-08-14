@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 dist-electron
+electron/.mindforge
 
 # Editor directories and files
 .vscode/*

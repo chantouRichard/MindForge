@@ -47,12 +47,15 @@ import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import leftPanel from "../components/home/leftPanel.vue";
 import rightPanel from "../components/home/rightPanel.vue";
 import operation from "../components/operation.vue";
+
 import markdownArea from "../components/home/markdownArea.vue";
 import pictureArea from "../components/home/pictureArea.vue";
 import PDFArea from "../components/home/PDFArea.vue";
 import MindMapArea from "../components/home/MindMapArea.vue";
 import inspirationArea from "../components/home/main-area/inspirationArea.vue";
 import ScheduleArea from "../components/home/main-area/ScheduleArea.vue";
+import AchievementArea from "../components/home/main-area/AchievementArea.vue";
+
 import FloatingAIChat from "../components/home/FloatingAIChat.vue";
 
 import { useRepositoryStore } from "../store/repository";
@@ -85,8 +88,12 @@ function getComponentByExt(tab) {
       return MindMapArea;
     case "json":
       return inspirationArea
-    default: {
+    case "schedule":
       return ScheduleArea;
+    case "achieve":
+      return AchievementArea
+    default: {
+      return MindMapArea;
     }
   }
 }
@@ -189,7 +196,9 @@ const iconMap = {
   ".png": "picture.png",
   ".mindmap": "mindmap.png",
   ".pdf": "pdf.png",
-  ".inspire.json": "inspiration.svg"
+  ".inspire.json": "inspiration.svg",
+  ".schedule": "schedule.svg",
+  ".achieve": "achievement.svg",
   // ...
 };
 

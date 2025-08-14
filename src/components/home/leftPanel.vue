@@ -82,6 +82,9 @@
           <div class="left-panel-main-area" v-else-if="mode === 'schedule'">
             <SchedulePanel />
           </div>
+          <div class="left-panel-main-area" v-else-if="mode === 'achievement'">
+            <AchievementPanel />
+          </div>
           <div class="left-panel-bottom">
             <div
               class="left-panel-button-container"
@@ -112,8 +115,11 @@
 <script setup>
 import { ref, watch } from "vue";
 import TreeItem from "./TreeItem.vue"; // 自定义组件
+
 import InspirationTagList from "./left-panel/InspirationTagList.vue";
 import SchedulePanel from "./left-panel/SchedulePanel.vue";
+import AchievementPanel from "./left-panel/AchievementPanel.vue";
+
 import TooltipWrapper from "./TooltipWrapper.vue";
 
 // 设置界面展示
@@ -126,14 +132,12 @@ const showSettingPage = () => {
 // 按钮配置
 import notesIcon from "../../assets/home/left-panel/notes.svg";
 import inspirationIcon from "../../assets/home/left-panel/inspiration.svg";
-import progressIcon from "../../assets/home/left-panel/progress.svg";
 import scheduleIcon from "../../assets/home/left-panel/schedule.svg";
 import achievementIcon from "../../assets/home/left-panel/achievement.svg";
 const mode = ref("notes");
 const toolbarLeftButtons = ref([
   { icon: notesIcon, alt: "笔记", showtip: false },
   { icon: inspirationIcon, alt: "灵感", showtip: false },
-  { icon: progressIcon, alt: "进度", showtip: false },
   { icon: scheduleIcon, alt: "计划", showtip: false },
   { icon: achievementIcon, alt: "成就", showtip: false },
 ]);
@@ -152,14 +156,10 @@ const clickButton = (index) => {
       break;
     }
     case 2: {
-      mode.value = "progress";
-      break;
-    }
-    case 3: {
       mode.value = "schedule";
       break;
     }
-    case 4: {
+    case 3: {
       mode.value = "achievement";
       break;
     }
@@ -499,7 +499,7 @@ const expandAndCollapse = () => {
   height: 100vh;
   background-color: #f6f6f6;
   position: relative;
-  min-width: 240px;
+  min-width: 284px;
   border-right: 1px solid #ccc;
 }
 

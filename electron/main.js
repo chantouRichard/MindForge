@@ -635,3 +635,298 @@ ipcMain.handle("hide-inspiration", async (event) => {
     petWindow.hide();
   }
 });
+
+// 计划管理
+ipcMain.handle("new-schedule", async (event, filePath, content) => {
+  try {
+    // 检查目录是否存在，不存在就创建
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(filePath, content, "utf-8");
+    return { success: true, message: "文件创建成功" };
+  } catch (error) {
+    console.error("[new-inspiration] 错误:", error);
+    return { success: false, message: "创建失败", error: error.message };
+  }
+});
+
+// 核心逻辑：保存日计划
+ipcMain.handle("save-schedule", async (event, { path, saveContent }) => {
+  try {
+    const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+    const newSchedules = JSON.parse(saveContent).schedules;
+
+    if (!json.schedules) {
+      // 文件内没有 schedules，直接赋值
+      json.schedules = newSchedules;
+    } else {
+      // 文件已有 schedules，更新或新增
+      newSchedules.forEach(newEvent => {
+        const idx = json.schedules.findIndex(ev => ev.id === newEvent.id);
+        if (idx !== -1) {
+          // 更新已有事件
+          json.schedules[idx] = newEvent;
+        } else {
+          // 新增事件
+          json.schedules.push(newEvent);
+        }
+      });
+    }
+
+    fs.writeFileSync(path, JSON.stringify(json, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error("保存失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("save-week-schedule", async (event, { path, saveContent }) => {
+  try {
+    const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+    const { data: newData, links: newLinks } = JSON.parse(saveContent).WeekSchedules;
+
+    if (!json.WeekSchedules) {
+      json.WeekSchedules = { data: [], links: [] };
+    }
+
+    // ===== 处理 data =====
+    newData.forEach(newEvent => {
+      const idx = json.WeekSchedules.data.findIndex(ev => ev.id === newEvent.id);
+      if (idx !== -1) {
+        json.WeekSchedules.data[idx] = newEvent; // 更新
+      } else {
+        json.WeekSchedules.data.push(newEvent); // 新增
+      }
+    });
+
+    // ===== 处理 links =====
+    newLinks.forEach(newLink => {
+      const idx = json.WeekSchedules.links.findIndex(
+        link => link.source === newLink.source && link.target === newLink.target
+      );
+      if (idx !== -1) {
+        json.WeekSchedules.links[idx] = newLink; // 更新
+      } else {
+        json.WeekSchedules.links.push(newLink); // 新增
+      }
+    });
+
+    fs.writeFileSync(path, JSON.stringify(json, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error("保存失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+// 年计划
+ipcMain.handle("save-year-schedule", async (event, { path, saveContent }) => {
+  try {
+    const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+    const { data: newData, links: newLinks } = JSON.parse(saveContent).YearSchedules;
+
+    if (!json.YearSchedules) {
+      json.YearSchedules = { data: [], links: [] };
+    }
+
+    // ===== 处理 data =====
+    newData.forEach(newEvent => {
+      const idx = json.YearSchedules.data.findIndex(ev => ev.id === newEvent.id);
+      if (idx !== -1) {
+        json.YearSchedules.data[idx] = newEvent; // 更新
+      } else {
+        json.YearSchedules.data.push(newEvent); // 新增
+      }
+    });
+
+    // ===== 处理 links =====
+    newLinks.forEach(newLink => {
+      const idx = json.YearSchedules.links.findIndex(
+        link => link.source === newLink.source && link.target === newLink.target
+      );
+      if (idx !== -1) {
+        json.YearSchedules.links[idx] = newLink; // 更新
+      } else {
+        json.YearSchedules.links.push(newLink); // 新增
+      }
+    });
+
+    fs.writeFileSync(path, JSON.stringify(json, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error("保存失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+// 进度管理
+ipcMain.handle("new-progress", async (event, filePath, content) => {
+  try {
+    // 检查目录是否存在，不存在就创建
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(filePath, content, "utf-8");
+    return { success: true, message: "文件创建成功" };
+  } catch (error) {
+    console.error("[new-progress] 错误:", error);
+    return { success: false, message: "创建失败", error: error.message };
+  }
+});
+
+// 核心逻辑：保存进度
+ipcMain.handle("save-progress", async (event, { path, saveContent }) => {
+  try {
+    const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+    const newProgresses = JSON.parse(saveContent).progresses || [];
+
+    // 如果 progress 不存在，先初始化为数组
+    if (!Array.isArray(json.progresses)) {
+      json.progresses = [];
+    }
+
+    // 遍历新数据，按 id 更新或新增
+    newProgresses.forEach(newItem => {
+      const idx = json.progresses.findIndex(oldItem => oldItem.id === newItem.id);
+      if (idx !== -1) {
+        json.progresses[idx] = newItem; // 更新
+      } else {
+        json.progresses.push(newItem); // 新增
+      }
+    });
+
+    fs.writeFileSync(path, JSON.stringify(json, null, 2), "utf-8");
+
+    return { success: true };
+  } catch (err) {
+    console.error("保存失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+// 影记管理
+ipcMain.handle("new-anno", async (event, filePath, content) => {
+  try {
+    // 检查目录是否存在，不存在就创建
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(filePath, content, "utf-8");
+    return { success: true, message: "文件创建成功" };
+  } catch (error) {
+    console.error("[new-progress] 错误:", error);
+    return { success: false, message: "创建失败", error: error.message };
+  }
+});
+
+// 核心逻辑：保存影记
+ipcMain.handle("save-anno", async (event, { path, saveContent }) => {
+  try {
+    const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+    const newAnnoData = JSON.parse(saveContent).albums || [];
+
+    // 如果 albums 不存在，初始化为空数组
+    if (!Array.isArray(json.albums)) {
+      json.albums = [];
+    }
+
+    // 遍历新数据
+    newAnnoData.forEach(newAlbum => {
+      // 找到对应的 album
+      let albumIdx = json.albums.findIndex(a => a.albumId === newAlbum.albumId);
+      if (albumIdx === -1) {
+        // 没有这个相册就直接 push
+        json.albums.push(newAlbum);
+      } else {
+        // 相册存在，检查 memories
+        if (!Array.isArray(json.albums[albumIdx].memories)) {
+          json.albums[albumIdx].memories = [];
+        }
+        newAlbum.memories.forEach(newMemory => {
+          let memIdx = json.albums[albumIdx].memories.findIndex(m => m.memoryId === newMemory.memoryId);
+          if (memIdx === -1) {
+            json.albums[albumIdx].memories.push(newMemory);
+          } else {
+            // 只更新 images 和 texts（保持其他字段）
+            json.albums[albumIdx].memories[memIdx] = {
+              ...json.albums[albumIdx].memories[memIdx],
+              ...newMemory
+            };
+          }
+        });
+      }
+    });
+
+    fs.writeFileSync(path, JSON.stringify(json, null, 2), "utf-8");
+    return { success: true };
+  } catch (err) {
+    console.error("保存注释失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("save-anno-image", async (event, { memoryId, id, src }) => {
+  try {
+    // 定义安全存储目录，比如 app.getPath('userData')/.mindforge/anno-images
+    const baseDir = path.join(__dirname, ".mindforge", "anno-images");
+    const memoryDir = path.join(baseDir, memoryId);
+    fs.mkdirSync(memoryDir, { recursive: true });
+
+    const filePath = path.join(memoryDir, `${id}.png`);
+
+    let imageBuffer;
+
+    if (typeof src !== "string") {
+      throw new Error("src 必须是字符串");
+    }
+
+    if (src.startsWith("data:image")) {
+      // dataURL 转 buffer
+      const base64Data = src.split(",")[1];
+      imageBuffer = Buffer.from(base64Data, "base64");
+    } else if (src.startsWith("file://")) {
+      imageBuffer = fs.readFileSync(src.replace("file://", ""));
+    } else {
+      throw new Error("不支持的 src 格式");
+    }
+
+    fs.writeFileSync(filePath, imageBuffer);
+
+    // 返回 Base64
+    const savedBuffer = fs.readFileSync(filePath);
+    const base64 = `data:image/png;base64,${savedBuffer.toString("base64")}`;
+
+    return { success: true, base64, filePath };
+  } catch (err) {
+    console.error("保存图片失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+/**
+ * 读取图片
+ * 参数: { memoryId, id }
+ * 返回: Base64
+ */
+ipcMain.handle("read-anno-image", async (event, { memoryId, id }) => {
+  try {
+    const filePath = path.join(__dirname, ".mindforge", "anno-images", memoryId, `${id}.png`);
+    if (!fs.existsSync(filePath)) {
+      throw new Error("图片不存在");
+    }
+    const buffer = fs.readFileSync(filePath);
+    const base64 = `data:image/png;base64,${buffer.toString("base64")}`;
+    return { success: true, base64 };
+  } catch (err) {
+    console.error("读取图片失败:", err);
+    return { success: false, error: err.message };
+  }
+});
