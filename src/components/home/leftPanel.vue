@@ -17,12 +17,14 @@
             class="left-panel-button-container"
             v-for="(btn, index) in toolbarLeftButtons"
             :key="index"
-            @click="clickButton(index)"
+            @click.stop="clickButton(index)"
             @mouseenter="btn.showtip = true"
             @mouseleave="btn.showtip = false"
           >
             <TooltipWrapper :text="btn.alt" :show="btn.showtip" />
             <img :src="btn.icon" class="left-panel-button" />
+
+            <MusicPanel v-if="index === 4" :show="showMusicPanel" />
           </div>
         </div>
         <div
@@ -119,6 +121,7 @@ import TreeItem from "./TreeItem.vue"; // 自定义组件
 import InspirationTagList from "./left-panel/InspirationTagList.vue";
 import SchedulePanel from "./left-panel/SchedulePanel.vue";
 import AchievementPanel from "./left-panel/AchievementPanel.vue";
+import MusicPanel from "./left-panel/MusicPanel.vue";
 
 import TooltipWrapper from "./TooltipWrapper.vue";
 
@@ -134,17 +137,20 @@ import notesIcon from "../../assets/home/left-panel/notes.svg";
 import inspirationIcon from "../../assets/home/left-panel/inspiration.svg";
 import scheduleIcon from "../../assets/home/left-panel/schedule.svg";
 import achievementIcon from "../../assets/home/left-panel/achievement.svg";
+import musicIcon from "../../assets/home/left-panel/music.svg";
 const mode = ref("notes");
 const toolbarLeftButtons = ref([
   { icon: notesIcon, alt: "笔记", showtip: false },
   { icon: inspirationIcon, alt: "灵感", showtip: false },
   { icon: scheduleIcon, alt: "计划", showtip: false },
   { icon: achievementIcon, alt: "成就", showtip: false },
+  { icon: musicIcon, alt: "音乐", showtip: false }
 ]);
 
 // 灵感库
 import { useRepositoryStore } from "../../store/repository";
 const repositoryStore = useRepositoryStore();
+const showMusicPanel = ref(false);
 const clickButton = (index) => {
   switch (index) {
     case 0: {
@@ -163,6 +169,11 @@ const clickButton = (index) => {
       mode.value = "achievement";
       break;
     }
+    case 4: {
+      showMusicPanel.value = !showMusicPanel.value;
+      console.log("showMusicPanel: ",showMusicPanel.value)
+      break;
+    }
   }
 };
 
@@ -175,6 +186,11 @@ const minWidth = 200;
 let startX = 0;
 let startWidth = 0;
 
+const handleClickOutside = (e) => {
+  if (!e.target.closest('.music-panel') && showMusicPanel.value) {
+    showMusicPanel.value = false;
+  }
+};
 const onMouseDown = (e) => {
   startX = e.clientX;
   startWidth = width.value;
@@ -301,9 +317,11 @@ const fileTree = ref(null);
 import { onMounted, onBeforeUnmount } from "vue";
 onMounted(() => {
   fileTree.value.addEventListener("contextmenu", onContextMenu);
+  document.addEventListener('click', handleClickOutside);
 });
 onBeforeUnmount(() => {
   fileTree.value.removeEventListener("contextmenu", onContextMenu);
+  document.removeEventListener('click', handleClickOutside);
 });
 
 // 右键菜单项

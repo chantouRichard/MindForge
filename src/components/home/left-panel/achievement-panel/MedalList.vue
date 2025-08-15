@@ -58,7 +58,7 @@ const categories = ref([
     id: 3,
     name: "活动徽章",
     medals: [
-      { id: 301, name: "节日快乐", weight: 9, model: "/medal/test.glb" },
+      { id: 301, name: "节日快乐", weight: 9, model: "/medal/cup.glb" },
       { id: 302, name: "新年福袋", weight: 7, model: "/medal/test.glb" },
     ]
   }

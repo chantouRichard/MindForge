@@ -31,6 +31,7 @@ function createWelcomeWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false,
     },
   });
 
@@ -56,6 +57,7 @@ function createHomeWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false,
     },
   });
 
@@ -91,6 +93,7 @@ function createPetWindow() {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
       contextIsolation: true,
+      webSecurity: false,
       // devTools: false,
     },
   });
@@ -664,8 +667,8 @@ ipcMain.handle("save-schedule", async (event, { path, saveContent }) => {
       json.schedules = newSchedules;
     } else {
       // 文件已有 schedules，更新或新增
-      newSchedules.forEach(newEvent => {
-        const idx = json.schedules.findIndex(ev => ev.id === newEvent.id);
+      newSchedules.forEach((newEvent) => {
+        const idx = json.schedules.findIndex((ev) => ev.id === newEvent.id);
         if (idx !== -1) {
           // 更新已有事件
           json.schedules[idx] = newEvent;
@@ -687,15 +690,18 @@ ipcMain.handle("save-schedule", async (event, { path, saveContent }) => {
 ipcMain.handle("save-week-schedule", async (event, { path, saveContent }) => {
   try {
     const json = JSON.parse(fs.readFileSync(path, "utf-8"));
-    const { data: newData, links: newLinks } = JSON.parse(saveContent).WeekSchedules;
+    const { data: newData, links: newLinks } =
+      JSON.parse(saveContent).WeekSchedules;
 
     if (!json.WeekSchedules) {
       json.WeekSchedules = { data: [], links: [] };
     }
 
     // ===== 处理 data =====
-    newData.forEach(newEvent => {
-      const idx = json.WeekSchedules.data.findIndex(ev => ev.id === newEvent.id);
+    newData.forEach((newEvent) => {
+      const idx = json.WeekSchedules.data.findIndex(
+        (ev) => ev.id === newEvent.id
+      );
       if (idx !== -1) {
         json.WeekSchedules.data[idx] = newEvent; // 更新
       } else {
@@ -704,9 +710,10 @@ ipcMain.handle("save-week-schedule", async (event, { path, saveContent }) => {
     });
 
     // ===== 处理 links =====
-    newLinks.forEach(newLink => {
+    newLinks.forEach((newLink) => {
       const idx = json.WeekSchedules.links.findIndex(
-        link => link.source === newLink.source && link.target === newLink.target
+        (link) =>
+          link.source === newLink.source && link.target === newLink.target
       );
       if (idx !== -1) {
         json.WeekSchedules.links[idx] = newLink; // 更新
@@ -727,15 +734,18 @@ ipcMain.handle("save-week-schedule", async (event, { path, saveContent }) => {
 ipcMain.handle("save-year-schedule", async (event, { path, saveContent }) => {
   try {
     const json = JSON.parse(fs.readFileSync(path, "utf-8"));
-    const { data: newData, links: newLinks } = JSON.parse(saveContent).YearSchedules;
+    const { data: newData, links: newLinks } =
+      JSON.parse(saveContent).YearSchedules;
 
     if (!json.YearSchedules) {
       json.YearSchedules = { data: [], links: [] };
     }
 
     // ===== 处理 data =====
-    newData.forEach(newEvent => {
-      const idx = json.YearSchedules.data.findIndex(ev => ev.id === newEvent.id);
+    newData.forEach((newEvent) => {
+      const idx = json.YearSchedules.data.findIndex(
+        (ev) => ev.id === newEvent.id
+      );
       if (idx !== -1) {
         json.YearSchedules.data[idx] = newEvent; // 更新
       } else {
@@ -744,9 +754,10 @@ ipcMain.handle("save-year-schedule", async (event, { path, saveContent }) => {
     });
 
     // ===== 处理 links =====
-    newLinks.forEach(newLink => {
+    newLinks.forEach((newLink) => {
       const idx = json.YearSchedules.links.findIndex(
-        link => link.source === newLink.source && link.target === newLink.target
+        (link) =>
+          link.source === newLink.source && link.target === newLink.target
       );
       if (idx !== -1) {
         json.YearSchedules.links[idx] = newLink; // 更新
@@ -792,8 +803,10 @@ ipcMain.handle("save-progress", async (event, { path, saveContent }) => {
     }
 
     // 遍历新数据，按 id 更新或新增
-    newProgresses.forEach(newItem => {
-      const idx = json.progresses.findIndex(oldItem => oldItem.id === newItem.id);
+    newProgresses.forEach((newItem) => {
+      const idx = json.progresses.findIndex(
+        (oldItem) => oldItem.id === newItem.id
+      );
       if (idx !== -1) {
         json.progresses[idx] = newItem; // 更新
       } else {
@@ -806,6 +819,35 @@ ipcMain.handle("save-progress", async (event, { path, saveContent }) => {
     return { success: true };
   } catch (err) {
     console.error("保存失败:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+// 删除进度
+ipcMain.handle("delete-progress", async (event, { path, outerId, innerId }) => {
+  try {
+    const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+
+    if (!Array.isArray(json.progresses)) {
+      json.progresses = [];
+    }
+
+    if (!innerId) {
+      // 删除外层
+      json.progresses = json.progresses.filter((p) => p.id !== outerId);
+    } else {
+      // 删除内层
+      const outer = json.progresses.find((p) => p.id === outerId);
+      if (outer && Array.isArray(outer.progresses)) {
+        outer.progresses = outer.progresses.filter((ip) => ip.id !== innerId);
+      }
+    }
+
+    fs.writeFileSync(path, JSON.stringify(json, null, 2), "utf-8");
+
+    return { success: true };
+  } catch (err) {
+    console.error("删除失败:", err);
     return { success: false, error: err.message };
   }
 });
@@ -833,32 +875,43 @@ ipcMain.handle("save-anno", async (event, { path, saveContent }) => {
     const json = JSON.parse(fs.readFileSync(path, "utf-8"));
     const newAnnoData = JSON.parse(saveContent).albums || [];
 
-    // 如果 albums 不存在，初始化为空数组
-    if (!Array.isArray(json.albums)) {
-      json.albums = [];
-    }
+    if (!Array.isArray(json.albums)) json.albums = [];
 
-    // 遍历新数据
-    newAnnoData.forEach(newAlbum => {
-      // 找到对应的 album
-      let albumIdx = json.albums.findIndex(a => a.albumId === newAlbum.albumId);
+    newAnnoData.forEach((newAlbum) => {
+      if (!Array.isArray(newAlbum.memories)) newAlbum.memories = [];
+
+      let albumIdx = json.albums.findIndex(
+        (a) => a.albumId === newAlbum.albumId
+      );
+
       if (albumIdx === -1) {
-        // 没有这个相册就直接 push
+        // 新相册直接 push
         json.albums.push(newAlbum);
       } else {
-        // 相册存在，检查 memories
-        if (!Array.isArray(json.albums[albumIdx].memories)) {
-          json.albums[albumIdx].memories = [];
-        }
-        newAlbum.memories.forEach(newMemory => {
-          let memIdx = json.albums[albumIdx].memories.findIndex(m => m.memoryId === newMemory.memoryId);
+        // 老相册，处理 memories
+        const oldAlbum = json.albums[albumIdx];
+        json.albums[albumIdx] = {
+          ...oldAlbum,
+          ...newAlbum, // 会更新 albumTitle、type、urgency 等字段
+          memories: oldAlbum.memories || [], // 保留老的 memories，下面再处理
+        };
+
+        newAlbum.memories.forEach((newMemory) => {
+          let memIdx = json.albums[albumIdx].memories.findIndex(
+            (m) => m.memoryId === newMemory.memoryId
+          );
+
           if (memIdx === -1) {
+            // 新 memory
             json.albums[albumIdx].memories.push(newMemory);
           } else {
-            // 只更新 images 和 texts（保持其他字段）
+            // 更新 images 和 texts
             json.albums[albumIdx].memories[memIdx] = {
               ...json.albums[albumIdx].memories[memIdx],
-              ...newMemory
+              memoryTitle: newMemory.memoryTitle,
+              thumbnail: newMemory.thumbnail,
+              images: newMemory.images,
+              texts: newMemory.texts,
             };
           }
         });
@@ -875,34 +928,62 @@ ipcMain.handle("save-anno", async (event, { path, saveContent }) => {
 
 ipcMain.handle("save-anno-image", async (event, { memoryId, id, src }) => {
   try {
-    // 定义安全存储目录，比如 app.getPath('userData')/.mindforge/anno-images
+    if (typeof src !== "string") throw new Error("src 必须是字符串");
+
+    // 安全存储目录
     const baseDir = path.join(__dirname, ".mindforge", "anno-images");
-    const memoryDir = path.join(baseDir, memoryId);
+    const memoryDir = path.join(baseDir, String(memoryId));
     fs.mkdirSync(memoryDir, { recursive: true });
 
-    const filePath = path.join(memoryDir, `${id}.png`);
-
-    let imageBuffer;
-
-    if (typeof src !== "string") {
-      throw new Error("src 必须是字符串");
-    }
-
-    if (src.startsWith("data:image")) {
-      // dataURL 转 buffer
-      const base64Data = src.split(",")[1];
-      imageBuffer = Buffer.from(base64Data, "base64");
+    // 判断类型和扩展名
+    let ext = "png"; // 默认
+    if (src.startsWith("data:image/")) {
+      const match = src.match(/^data:image\/(.*?);base64,/);
+      if (match && match[1]) ext = match[1].toLowerCase();
+      if (ext === "jpeg") ext = "jpg";
     } else if (src.startsWith("file://")) {
-      imageBuffer = fs.readFileSync(src.replace("file://", ""));
+      const parsedPath = path.parse(src.replace("file://", ""));
+      ext = parsedPath.ext.replace(".", "").toLowerCase();
+      if (ext === "jpeg") ext = "jpg";
+      if (!["png", "jpg", "svg"].includes(ext)) ext = "png"; // 不支持格式默认 png
     } else {
       throw new Error("不支持的 src 格式");
     }
 
-    fs.writeFileSync(filePath, imageBuffer);
+    const filePath = path.join(memoryDir, `${id}.${ext}`);
 
-    // 返回 Base64
+    // 写入文件
+    if (ext === "svg") {
+      // SVG 可以直接写文本
+      let svgContent;
+      if (src.startsWith("data:image/svg+xml")) {
+        svgContent = Buffer.from(src.split(",")[1], "base64");
+      } else if (src.startsWith("file://")) {
+        svgContent = fs.readFileSync(src.replace("file://", ""));
+      } else {
+        throw new Error("SVG 格式不支持的 src");
+      }
+      fs.writeFileSync(filePath, svgContent);
+    } else {
+      // 图片格式
+      let imageBuffer;
+      if (src.startsWith("data:image")) {
+        const base64Data = src.split(",")[1];
+        imageBuffer = Buffer.from(base64Data, "base64");
+      } else if (src.startsWith("file://")) {
+        imageBuffer = fs.readFileSync(src.replace("file://", ""));
+      } else {
+        throw new Error("不支持的 src 格式");
+      }
+      fs.writeFileSync(filePath, imageBuffer);
+    }
+
+    // 返回 Base64 给前端
     const savedBuffer = fs.readFileSync(filePath);
-    const base64 = `data:image/png;base64,${savedBuffer.toString("base64")}`;
+    const base64 =
+      ext === "svg"
+        ? `data:image/svg+xml;base64,${savedBuffer.toString("base64")}`
+        : `data:image/${ext};base64,${savedBuffer.toString("base64")}`;
 
     return { success: true, base64, filePath };
   } catch (err) {
@@ -918,15 +999,68 @@ ipcMain.handle("save-anno-image", async (event, { memoryId, id, src }) => {
  */
 ipcMain.handle("read-anno-image", async (event, { memoryId, id }) => {
   try {
-    const filePath = path.join(__dirname, ".mindforge", "anno-images", memoryId, `${id}.png`);
-    if (!fs.existsSync(filePath)) {
-      throw new Error("图片不存在");
+    const baseDir = path.join(__dirname, ".mindforge", "anno-images", memoryId);
+
+    // 支持的扩展名列表
+    const exts = ["png", "jpg", "jpeg", "svg", "svg+xml"];
+    let foundFile = null;
+    let ext = "";
+
+    for (const e of exts) {
+      const filePath = path.join(baseDir, `${id}.${e}`);
+      if (fs.existsSync(filePath)) {
+        foundFile = filePath;
+        ext = e === "jpeg" ? "jpg" : e; // 统一 jpeg -> jpg
+        break;
+      }
     }
-    const buffer = fs.readFileSync(filePath);
-    const base64 = `data:image/png;base64,${buffer.toString("base64")}`;
-    return { success: true, base64 };
+
+    if (!foundFile) throw new Error("图片不存在");
+
+    const buffer = fs.readFileSync(foundFile);
+
+    // 根据扩展名生成 Base64 MIME
+    const mimeType =
+      ext === "svg" || ext === "svg+xml" ? "image/svg+xml" : `image/${ext}`;
+    const base64 = `data:${mimeType};base64,${buffer.toString("base64")}`;
+
+    return { success: true, base64, filePath: foundFile };
   } catch (err) {
     console.error("读取图片失败:", err);
     return { success: false, error: err.message };
   }
 });
+
+// 删除影记
+ipcMain.handle(
+  "delete-album-memory",
+  async (event, { path, albumId, memoryId }) => {
+    try {
+      const json = JSON.parse(fs.readFileSync(path, "utf-8"));
+      if (!Array.isArray(json.albums)) json.albums = [];
+
+      const albumIndex = json.albums.findIndex((a) => a.albumId === albumId);
+      if (albumIndex === -1) {
+        return { success: false, error: "Album not found" };
+      }
+
+      if (memoryId == null) {
+        // 删除整个 album
+        json.albums.splice(albumIndex, 1);
+      } else {
+        const memoryIndex = json.albums[albumIndex].memories.findIndex(
+          (m) => m.memoryId === memoryId
+        );
+        if (memoryIndex === -1) {
+          return { success: false, error: "Memory not found" };
+        }
+        json.albums[albumIndex].memories.splice(memoryIndex, 1);
+      }
+
+      fs.writeFileSync(path, JSON.stringify(json, null, 2), "utf-8");
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+);

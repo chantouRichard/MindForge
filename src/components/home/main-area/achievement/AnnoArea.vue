@@ -18,21 +18,29 @@
       :draggable="true"
     >
       <v-layer ref="layer">
-        <v-image
-          v-for="item in safeImages"
-          :key="item.id"
-          :config="item"
-          @transformend="handleImgTransformEnd"
-          @dragend="handleImgDragEnd"
-        />
-        <v-text
-          v-for="textItem in texts"
-          :key="textItem.id"
-          :config="textItem"
-          @transformend="handleTextTransformEnd"
-          @dragend="handleTextDragEnd"
-        />
-        <v-transformer ref="transformer" />
+        <template v-if="safeImages.length || texts.length">
+          <v-image
+            v-for="item in safeImages"
+            :key="item.id"
+            :config="item"
+            @transformend="handleImgTransformEnd"
+            @dragend="handleImgDragEnd"
+          />
+          <v-text
+            v-for="textItem in texts"
+            :key="textItem.id"
+            :config="textItem"
+            @transformend="handleTextTransformEnd"
+            @dragend="handleTextDragEnd"
+          />
+          <v-transformer ref="transformer" />
+        </template>
+
+        <template v-else>
+          <v-image v-for="(welcomeImage, index) in welcomeImages" :key="index" :config="welcomeImage" />
+          <v-text v-for="(welcomeText, index) in welcomeTexts" :key="index" :config="welcomeText" />
+          <v-transformer ref="transformer" />
+        </template>
       </v-layer>
     </v-stage>
     <el-dialog v-model="isDialogVisible" title="编辑文本">
@@ -68,11 +76,14 @@ const safeImages = computed(() =>
     image: img.image instanceof Image ? img.image : null,
   }))
 );
+// 欢迎页面的文本和图片配置
+const welcomeTexts = ref([]);
+const welcomeImages = ref([]);
 
 // 存储图片
 const blobURLToDataURL = async (blobUrl) => {
   const response = await fetch(blobUrl); // 把 blob URL fetch 成 Response
-  const blob = await response.blob();    // 转成 Blob 对象
+  const blob = await response.blob(); // 转成 Blob 对象
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result); // 转成 DataURL
@@ -204,7 +215,7 @@ const handleClick = (index) => {
       break;
     }
     case 4: {
-      ElMessage.info("导出功能尚未实现")
+      ElMessage.info("导出功能尚未实现");
       break;
     }
   }
@@ -221,7 +232,81 @@ const initStage = () => {
   window.addEventListener("paste", handlePaste);
   updateSize();
   const stage = stageRef.value.getNode();
-  stage.position({ x: props.item.stageX || 600, y: props.item.stageY || 300 })
+  stage.position({ x: props.item.stageX || 600, y: props.item.stageY || 300 });
+
+  welcomeTexts.value = [{
+    x: stageSize.value.width / 2 - stage.x() - 150,
+    y: stageSize.value.height / 2 - stage.y() - 50,
+    text: "点击左上角可以添加你的影记~\n",
+    fontSize: 24,
+    fontFamily: "文悦孙小松春物语体 (须授权)",
+    fill: "#888",
+    align: "center",
+  },
+  {
+    x: stageSize.value.width / 2 - stage.x() - 350,
+    y: stageSize.value.height / 2 - stage.y() + 50,
+    text: "在这里，你可以：\n1. 添加文本和图片 ( 支持粘贴和拖拽)\n2. 编辑文本内容",
+    fontSize: 24,
+    fontFamily: "文悦孙小松春物语体 (须授权)",
+    fill: "#888",
+    align: "left",
+  },
+    {
+    x: stageSize.value.width / 2 - stage.x() + 90,
+    y: stageSize.value.height / 2 - stage.y() + 150,
+    text: "3. 删除不需要的元素\n4. 导出你的影记\n5. 分享给你的朋友",
+    fontSize: 24,
+    fontFamily: "文悦孙小松春物语体 (须授权)",
+    fill: "#888",
+    align: "left",
+  },
+  {
+    x: stageSize.value.width / 2 - stage.x() - 150,
+    y: stageSize.value.height / 2 - stage.y() + 250,
+    text: "开始你的影记之旅吧！",
+    fontSize: 24,
+    fontFamily: "文悦孙小松春物语体 (须授权)",
+    fill: "#888",
+    align: "center",
+  }];
+  welcomeImages.value = [];
+  let img1 = new Image();
+  img1.src = "/introdirection.jpg";
+  img1.onload = () => {
+    welcomeImages.value.push({
+      width: 260,
+      height: 200,
+      x: stageSize.value.width / 2 - stage.x() - 300,
+      y: stageSize.value.height / 2 - stage.y() - 300,
+      image: img1,
+      draggable: true,
+    });
+  };
+  let img2 = new Image();
+  img2.src = "/circle1.png";
+  img2.onload = () => {
+    welcomeImages.value.push({
+      width: 450,
+      height: 200,
+      x: stageSize.value.width / 2 - stage.x() - 400,
+      y: stageSize.value.height / 2 - stage.y() - 20,
+      image: img2,
+      draggable: true,
+    });
+  };
+  let img3 = new Image();
+  img3.src = "/circle1.png";
+  img3.onload = () => {
+    welcomeImages.value.push({
+      width: 260,
+      height: 200,
+      x: stageSize.value.width / 2 - stage.x() + 60,
+      y: stageSize.value.height / 2 - stage.y() + 80,
+      image: img3,
+      draggable: true,
+    });
+  };
 
   const maxWidth = 300;
 
@@ -392,6 +477,7 @@ function addText() {
     y: centerY - stage.y(),
     text: "新文本",
     fontSize: 20,
+    fontFamily: "文悦孙小松春物语体 (须授权)",
     fill: "#000",
     draggable: true,
     rotation: 0,
@@ -517,7 +603,6 @@ import { debounce } from "lodash";
 const saveCanvasDebounced = debounce(() => {
   saveCanvas();
 }, 1000); // 用户停止操作 1 秒后保存
-
 
 // 剪贴板粘贴
 const handlePaste = (event) => {

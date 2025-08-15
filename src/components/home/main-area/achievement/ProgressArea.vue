@@ -60,12 +60,20 @@
       <div class="progress-text">
         整体进度: {{ Math.round(progress.totalProgress * 100) }}%
       </div>
+
+      <!-- 右上角操作按钮 -->
+      <div class="button-container" style="top: 4px;right: 28px;" @click="handleEdit(progress)">
+        <img class="button" :src="editIcon"/>
+      </div>
+      <div class="button-container" style="top: 4px;right: 4px;" @click="handleDelete(progress)">
+        <img class="button" :src="closeIcon"/>
+      </div>
     </div>
   </div>
   <!-- 弹窗 -->
   <el-dialog
     v-model="dialogVisible"
-    title="新增任务"
+    :title="dialogTitle"
     width="500px"
     :destroy-on-close="true"
   >
@@ -160,7 +168,8 @@
 
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="confirmAdd">确定</el-button>
+      <el-button type="primary" v-if="submitMode == 'add'" @click="confirmAdd">确定</el-button>
+      <el-button type="primary" v-else @click="confirmEdit">确定</el-button>
     </template>
   </el-dialog>
 </template>
@@ -175,8 +184,37 @@ import {
   computed,
 } from "vue";
 
+const dialogTitle = computed(() => {
+  return submitMode.value === "add" ? "新增任务" : "编辑任务";
+});
+// 右上角操作按钮函数
+const submitMode = ref("add");
+function handleEdit(progress) {
+  submitMode.value = "edit";
+  dialogVisible.value = true;
+  form.value = progress;
+  tagInput.value = progress.tags.join(", ");
+}
+async function handleDelete(progress) {
+  const preload = {
+    path: `${repositoryStore.recentRepositories[0].path}\\.mindforge\\我的成就.achieve`,
+    outerId: props.item.id,
+    innerId: progress.id,
+  }
+  window.electronAPI.deleteProgress(preload).then((res)=>{
+    if(res.success){
+      ElMessage.success("删除成功");
+      props.item.progresses = props.item.progresses.filter(p => p.id !== progress.id);
+    }
+    else{
+      ElMessage.error("删除失败");
+    }
+  })
+}
 import completeIcon from "../../../../assets/home/complete.svg";
 import addIcon from "../../../../assets/home/add.png";
+import editIcon from "../../../../assets/home/edit.svg";
+import closeIcon from "../../../../assets/home/close.png";
 
 const props = defineProps({
   item: Object,
@@ -228,6 +266,8 @@ function handleDragEnd() {
   dragging = false;
   window.removeEventListener("mousemove", moveHandler);
   window.removeEventListener("mouseup", upHandler);
+
+  saveProgressDebounce();
 }
 
 onBeforeUnmount(() => {
@@ -254,6 +294,7 @@ const form = ref({
 const tagInput = ref("");
 // 打开弹窗
 function openDialog() {
+  submitMode.value = "add";
   dialogVisible.value = true;
   form.value = {
     title: "",
@@ -301,6 +342,14 @@ const removeMilestone = (index) => {
 // 确认新增
 import { useRepositoryStore } from "../../../../store/repository";
 const repositoryStore = useRepositoryStore();
+async function confirmEdit(){
+  if (!form.value.title) {
+    alert("请填写标题");
+    return;
+  }
+  dialogVisible.value = false;
+  saveProgressDebounce();
+}
 async function confirmAdd() {
   if (!form.value.title) {
     alert("请填写标题");
@@ -323,6 +372,10 @@ async function confirmAdd() {
   progresses.value.push(newTask);
   dialogVisible.value = false;
 
+  saveProgressDebounce();
+}
+
+async function saveProgress() {
   await repositoryStore.loadRepositories();
   const preload = {
     path: `${repositoryStore.recentRepositories[0].path}\\.mindforge\\我的成就.achieve`,
@@ -330,6 +383,7 @@ async function confirmAdd() {
       progresses: [
         {
           id: props.item.id,
+          title: props.item.title,
           type: props.item.type,
           urgency: props.item.urgency,
           progresses: progresses.value,
@@ -339,13 +393,17 @@ async function confirmAdd() {
   };
   window.electronAPI.saveProgress(preload).then((res) => {
     if (res.success) {
-      ElMessage.success("新增成功");
+      console.log("新增成功");
     } else {
       console.log("新增失败：", res);
-      ElMessage.error("新增失败");
     }
   });
 }
+import { debounce } from "lodash";
+import { ElMessage } from "element-plus";
+const saveProgressDebounce = debounce(() => {
+  saveProgress();
+}, 1000);
 </script>
 
 <style scoped>
@@ -389,26 +447,72 @@ async function confirmAdd() {
 
 .progress-area {
   width: 90%;
-  max-width: 600px;
+  min-width: 600px;
   height: 200px;
   user-select: none;
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   margin: 20px auto;
   margin-top: 72px;
   padding: 32px;
 
   display: flex;
   flex-direction: column;
-
   justify-content: flex-end;
 
-  border-radius: 12px;
-  border: #555 1px solid;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
-  box-shadow: unset 0 0 12px rgba(0, 0, 0, 0.2);
+  /* 玻璃磨砂渐变背景 */
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
+  backdrop-filter: blur(12px);
+
+  /* 柔和阴影 */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15),
+              inset 0 0 10px rgba(255, 255, 255, 0.05);
 
   position: relative;
+
+  /* 轻微动画效果 */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
+.progress-area:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25),
+              inset 0 0 12px rgba(255, 255, 255, 0.08);
+}
+.button-container{
+  width: 24px;
+  height: 24px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  position: absolute;
+  opacity: 0;
+
+  transition: all 0.2s ease;
+
+  border-radius: 4px;
+}
+.button-container:hover {
+  background-color: #e4e4e4;
+}
+.button {
+  width: 20px;
+  height: 20px;
+
+  object-fit: cover;
+}
+.progress-area:hover .button-container{
+  opacity: 1;
+}
+
 
 .complete-img {
   width: 24px;

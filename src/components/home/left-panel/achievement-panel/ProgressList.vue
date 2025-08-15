@@ -32,11 +32,9 @@
     <!-- 二级界面 -->
     <div v-else class="list-section">
       <div class="header">
-        <div
-          @click="viewLevel = 1"
-          class="back-btn"
-        >
-      <img :src="backIcon" class="type"/></div>
+        <div @click="viewLevel = 1" class="back-btn">
+          <img :src="backIcon" class="type" />
+        </div>
         <span class="header-title">{{ currentTitle }}</span>
       </div>
 
@@ -48,10 +46,10 @@
           @click="handleItemClick(item)"
         >
           <div class="list-name">{{ item.title }}</div>
-          <el-icon><ArrowRight /></el-icon>
+          <img :src="closeIcon" class="list-item-delete" @click.stop="deleteItem(item)"/>
         </div>
         <div class="type-container" @click="openDialog">
-          <img :src="addIcon" class="type" />
+          <img :src="addIcon" class="type"/>
         </div>
       </el-scrollbar>
     </div>
@@ -97,7 +95,8 @@
 import { ref, computed, onMounted } from "vue";
 
 import addIcon from "../../../../assets/home/add.png";
-import backIcon from "../../../../assets/home/back.png"
+import backIcon from "../../../../assets/home/back.png";
+import closeIcon from "../../../../assets/home/close.png";
 // SVG 路径自己换
 import iconDaily from "../../../../assets/home/left-panel/daily.svg";
 import iconTemp from "../../../../assets/home/left-panel/temp.svg";
@@ -411,6 +410,24 @@ function openDialog() {
   dialogVisible.value = true;
 }
 
+async function deleteItem(item) {
+  const preload = {
+    path:AchievePath.value,
+    outerId:item.id,
+    innerId:null
+  }
+  window.electronAPI.deleteProgress(preload).then((res) => {
+    if (res.success) {
+      ElMessage.success("删除成功");
+      allData.value = allData.value.filter(i => i.id !== item.id);
+    } else {
+      console.log("删除失败：", res);
+      ElMessage.error("删除失败");
+    }
+  });
+
+}
+
 async function handleSubmit() {
   if (!form.value.title) {
     ElMessage.error("请填写完整信息");
@@ -419,7 +436,7 @@ async function handleSubmit() {
 
   // 构造默认数据结构
   const newData = {
-    id: "P-"+Date.now(),
+    id: "P-" + Date.now(),
     title: form.value.title,
     progresses: [],
     type: form.value.type,
@@ -428,14 +445,14 @@ async function handleSubmit() {
 
   allData.value.push(newData);
   const preload = {
-    path:AchievePath.value,
-    saveContent:JSON.stringify({progresses:[newData]})
+    path: AchievePath.value,
+    saveContent: JSON.stringify({ progresses: [newData] }),
   };
   window.electronAPI.saveProgress(preload).then((res) => {
     if (res.success) {
       ElMessage.success("新增成功");
     } else {
-      console.log("新增失败：",res)
+      console.log("新增失败：", res);
       ElMessage.error("新增失败");
     }
   });
@@ -501,7 +518,7 @@ async function handleSubmit() {
 }
 
 .back-btn {
-    display: flex;
+  display: flex;
   justify-content: center;
   align-items: center;
 
@@ -537,6 +554,19 @@ async function handleSubmit() {
 
 .list-item:hover {
   background: #dad9d9;
+}
+
+.list-item-delete {
+  width: 16px;
+  height: 16px;
+  object-fit: cover;
+  color: #6c757d;
+  cursor: pointer;
+
+  opacity: 0;
+}
+.list-item:hover .list-item-delete {
+  opacity: 1;
 }
 
 .list-name {

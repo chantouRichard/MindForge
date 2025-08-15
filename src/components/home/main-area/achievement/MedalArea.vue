@@ -1,5 +1,28 @@
 <template>
-  <div ref="container" class="three-container"></div>
+  <div class="container">
+    <div class="top-part">
+      <div ref="container" class="three-container"></div>
+    </div>
+    <div class="bottom-part">
+      <div class="info-title">徽章信息</div>
+      <div class="info-container">
+        <div class="badge-detail">
+          <img src="https://img.icons8.com/color/48/000000/medal.png" class="badge-icon"/>
+          <div class="badge-text">
+            <div class="badge-name">旅行达人</div>
+            <div class="badge-desc">累计完成 10 个旅行影记</div>
+            <div class="badge-meta">
+              <span>获得时间：2025-08-15</span>
+              <span>稀有度：⭐⭐⭐</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress" :style="{ width: '75%' }"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -100,25 +123,39 @@ onMounted(() => {
   // duration 毫秒，0 表示立刻跳转
   function setCameraAzimuth(angleRad, duration = 0) {
     if (!camera || !controls) return;
+
     const target = controls.target.clone();
     const radius = camera.position.distanceTo(target);
-    const polar = controls.getPolarAngle();
     const startAzimuth = controls.getAzimuthalAngle();
+    const polar = controls.getPolarAngle();
+
+    // 计算最短路径差值
+    const shortestAngleDiff = (a, b) => {
+      let diff = b - a;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      return diff;
+    };
+    const deltaAzimuth = shortestAngleDiff(startAzimuth, angleRad);
 
     if (!duration) {
-      controls.setAzimuthalAngle(angleRad);
+      const x = target.x + radius * Math.sin(polar) * Math.sin(angleRad);
+      const y = target.y + radius * Math.cos(polar);
+      const z = target.z + radius * Math.sin(polar) * Math.cos(angleRad);
+      camera.position.set(x, y, z);
+      camera.lookAt(target);
       controls.update();
       return;
     }
 
     controls.enabled = false;
     const t0 = performance.now();
+
     const tick = (now) => {
       const t = Math.min(1, (now - t0) / duration);
       const ease = 1 - (1 - t) * (1 - t); // easeOutQuad
-      const currentAzimuth = startAzimuth + (angleRad - startAzimuth) * ease;
+      const currentAzimuth = startAzimuth + deltaAzimuth * ease;
 
-      // 根据极角+方位角+半径重新计算相机位置
       const x = target.x + radius * Math.sin(polar) * Math.sin(currentAzimuth);
       const y = target.y + radius * Math.cos(polar);
       const z = target.z + radius * Math.sin(polar) * Math.cos(currentAzimuth);
@@ -132,6 +169,7 @@ onMounted(() => {
         controls.enabled = true;
       }
     };
+
     requestAnimationFrame(tick);
   }
 
@@ -276,34 +314,129 @@ onBeforeUnmount(() => {
   if (controls) controls.dispose();
 });
 
-watch(() => props.item, (value) => {
-  const newCanvas = create2x2TextureWithFlip(props.item.name, 256, 256);
-  if (!newCanvas) return;
+watch(
+  () => props.item,
+  (value) => {
+    const newCanvas = create2x2TextureWithFlip(props.item.name, 256, 256);
+    if (!newCanvas) return;
 
-  const newTexture = new THREE.CanvasTexture(newCanvas);
+    const newTexture = new THREE.CanvasTexture(newCanvas);
 
-  model.traverse((child) => {
-    if (child.isMesh) {
-      if (child.name === "柱体_2") {
-        // 先释放旧纹理（可选）
-        if (child.material.map) {
-          child.material.map.dispose();
+    model.traverse((child) => {
+      if (child.isMesh) {
+        if (child.name === "柱体_2") {
+          // 先释放旧纹理（可选）
+          if (child.material.map) {
+            child.material.map.dispose();
+          }
+
+          child.material.map = newTexture;
+          child.material.needsUpdate = true;
         }
-
-        child.material.map = newTexture;
-        child.material.needsUpdate = true;
       }
-    }
-  });
-  scene.add(model);
-});
+    });
+    scene.add(model);
+  }
+);
 </script>
 
-<style>
-.three-container {
+<style scoped>
+.container {
   width: 100%;
   height: 100%;
+}
+.top-part {
+  width: 100%;
+  height: 50%;
   background-color: #111;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.three-container {
+  min-width: 600px;
+  width: 600px;
+  height: 100%;
   border-radius: 12px;
+}
+
+.bottom-part {
+  padding: 20px;
+  background-color: #000000;
+
+  width: 100%;
+  height: 100%;
+}
+
+.info-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 12px;
+
+  color: #ffd500;
+
+}
+
+.info-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.badge-detail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background-color: #000000;
+}
+
+.badge-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.badge-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  color: #fff;
+}
+
+.badge-name {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.badge-desc {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.badge-meta {
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  gap: 12px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: #eee;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.progress {
+  height: 100%;
+  background-color: #4caf50;
+  border-radius: 3px;
 }
 </style>

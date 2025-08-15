@@ -87,12 +87,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 进度管理
   newProgress: (path, content) => ipcRenderer.invoke("new-progress", path, content),
   saveProgress: ({path, saveContent}) => ipcRenderer.invoke("save-progress", {path, saveContent}),
+  deleteProgress: (params) => ipcRenderer.invoke("delete-progress", params),
 
   // 影记管理
   newAnno: (path, content) => ipcRenderer.invoke("new-anno", path, content),
   saveAnno: ({path, saveContent}) => ipcRenderer.invoke("save-anno", {path, saveContent}),
   saveAnnoImage: ({memoryId, id, src}) => ipcRenderer.invoke("save-anno-image", { memoryId, id, src }),
   readAnnoImage: ({memoryId, id}) => ipcRenderer.invoke("read-anno-image", { memoryId, id }),
+  deleteAlbumOrMemory: ({path, albumId, memoryId}) =>
+    ipcRenderer.invoke("delete-album-memory", { path, albumId, memoryId })
 });
 
 // 仓库管理

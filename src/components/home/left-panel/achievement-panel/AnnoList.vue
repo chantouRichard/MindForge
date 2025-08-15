@@ -4,14 +4,16 @@
       <div v-for="(album, idx) in albums" :key="album.id" class="album-block">
         <!-- 分类标题 -->
         <div class="album-header" @click="toggleExpand(idx)">
-          <span>{{ album.albumTitle }}</span>
+          <span @dblclick.stop="handleEditAlbum(album)">{{
+            album.albumTitle
+          }}</span>
           <el-icon>
             <component :is="expandedIndex === idx ? ArrowDown : ArrowRight" />
           </el-icon>
         </div>
 
         <!-- 瀑布流徽章列表 -->
-        <transition albumTitle="fade">
+        <transition name="fade">
           <div v-show="expandedIndex === idx" class="memory-grid">
             <div
               v-for="memory in album.memories"
@@ -19,61 +21,85 @@
               class="memory-card"
               @click="handleMedalClick(memory)"
             >
-              <div class="memory-albumTitle">{{ memory.memoryTitle }}</div>
+              <PhotoCard
+                :title="memory.memoryTitle"
+                :index="Number(String(memory.memoryId).slice(-1)) % 5"
+                @delete="handleDeleteCard(memory)"
+                @dblclick="handleEditMemory(memory)"
+              />
             </div>
-            <div class="memory-card" @click="openMemoryDialog">
-          <img :src="addIcon" class="type" />
-            </div>
+            <PhotoCard :title="''" :index="5" @click="openMemoryDialog" />
           </div>
         </transition>
+
+        <div class="album-delete-container">
+          <img
+            :src="closeIcon"
+            class="album-delete"
+            @click="handleDeleteAlbum(album)"
+          />
+        </div>
       </div>
       <div class="type-container" @click="openAlbumDialog">
-          <img :src="addIcon" class="type" />
-        </div>
+        <img :src="addIcon" class="type" />
+      </div>
     </el-scrollbar>
   </div>
   <!-- 新增相册弹窗 -->
-    <el-dialog
-      title="新增相册"
-      v-model="albumDialogVisible"
-      width="400px"
-    >
-      <el-form :model="newAlbum">
-        <el-form-item label="相册标题">
-          <el-input v-model="newAlbum.albumTitle" placeholder="请输入相册标题" />
-        </el-form-item>
-      </el-form>
+  <el-dialog
+    :title="dialogAlbumTitle"
+    v-model="albumDialogVisible"
+    width="400px"
+  >
+    <el-form :model="newAlbum">
+      <el-form-item label="相册标题">
+        <el-input v-model="newAlbum.albumTitle" placeholder="请输入相册标题" />
+      </el-form-item>
+    </el-form>
 
-      <template #footer>
-        <el-button @click="albumDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="addAlbum">确定</el-button>
-      </template>
-    </el-dialog>
-    <!-- 新增记忆弹窗 -->
-    <el-dialog
-      title="新增记忆"
-      v-model="memoryDialogVisible"
-      width="500px"
-    >
-      <el-form :model="newMemory">
-        <el-form-item label="记忆标题">
-          <el-input v-model="newMemory.memoryTitle" placeholder="请输入记忆标题" />
-        </el-form-item>
-        <el-form-item label="缩略图路径">
-          <el-input v-model="newMemory.thumbnail" placeholder="例如 /photos/tokyo.jpg" />
-        </el-form-item>
-      </el-form>
+    <template #footer>
+      <el-button @click="albumDialogVisible = false">取消</el-button>
+      <el-button
+        v-if="dialogAlbumTitle == '新增相册'"
+        type="primary"
+        @click="addAlbum"
+        >确定</el-button
+      >
+      <el-button v-else type="primary" @click="EditAlbum">确定</el-button>
+    </template>
+  </el-dialog>
+  <!-- 新增记忆弹窗 -->
+  <el-dialog :title="dialogMemoryTitle" v-model="memoryDialogVisible" width="500px">
+    <el-form :model="newMemory">
+      <el-form-item label="记忆标题">
+        <el-input
+          v-model="newMemory.memoryTitle"
+          placeholder="请输入记忆标题"
+        />
+      </el-form-item>
+      <el-form-item label="缩略图路径">
+        <el-input
+          v-model="newMemory.thumbnail"
+          placeholder="例如 /photos/tokyo.jpg"
+        />
+      </el-form-item>
+    </el-form>
 
-      <template #footer>
-        <el-button @click="memoryDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="addMemory">确定</el-button>
-      </template>
-    </el-dialog>
+    <template #footer>
+      <el-button @click="memoryDialogVisible = false">取消</el-button>
+      <el-button v-if="dialogMemoryTitle == '新增记忆'" type="primary" @click="addMemory">确定</el-button>
+      <el-button v-else type="primary" @click="EditMemory">确定</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
-import addIcon from "../../../../assets/home/add.png"
+import addIcon from "../../../../assets/home/add.png";
+import closeIcon from "../../../../assets/home/close.png";
+
+import { ArrowRight, ArrowDown } from "@element-plus/icons-vue";
+import PhotoCard from "./anno-list/PhotoCard.vue";
 
 import { useRepositoryStore } from "../../../../store/repository";
 const repositoryStore = useRepositoryStore();
@@ -196,7 +222,9 @@ function handleMedalClick(memory) {
   }
 
   // 在当前相册中找到 memoryId 相同的元素
-  const targetMemory = album.memories.find(m => m.memoryId === memory.memoryId);
+  const targetMemory = album.memories.find(
+    (m) => m.memoryId === memory.memoryId
+  );
   if (!targetMemory) {
     console.warn("未找到对应的 memory");
     return;
@@ -204,7 +232,58 @@ function handleMedalClick(memory) {
 
   fileStore.setAchievementSelected(targetMemory);
 }
+// 删除相册
+function handleDeleteAlbum(album) {
+  const preload = {
+    path: AchievePath.value,
+    albumId: album.albumId,
+    memoryId: null,
+  };
+  console.log("preload: ", preload);
+  window.electronAPI.deleteAlbumOrMemory(preload).then((res) => {
+    if (res.success) {
+      ElMessage.success("删除成功");
+      albums.value = albums.value.filter((a) => a.albumId !== album.albumId);
+    } else {
+      console.log("res:", res);
+      ElMessage.error("删除失败");
+    }
+  });
+}
+function handleDeleteCard(memory) {
+  const preload = {
+    path: AchievePath.value,
+    albumId: albums.value[expandedIndex.value].albumId,
+    memoryId: memory.memoryId,
+  };
+  console.log("preload: ", preload);
+  window.electronAPI.deleteAlbumOrMemory(preload).then((res) => {
+    if (res.success) {
+      ElMessage.success("删除成功");
+      albums.value[expandedIndex.value].memories = albums.value[
+        expandedIndex.value
+      ].memories.filter((m) => m.memoryId !== memory.memoryId);
+    } else {
+      console.log("res:", res);
+      ElMessage.error("删除失败");
+    }
+  });
+}
+// 修改相册名
+const dialogAlbumTitle = ref("");
+function handleEditAlbum(album) {
+  dialogAlbumTitle.value = "修改相册";
 
+  newAlbum.value = album;
+  albumDialogVisible.value = true;
+}
+// 修改记忆
+const dialogMemoryTitle = ref("");
+function handleEditMemory(memory) {
+  dialogMemoryTitle.value = "修改记忆";
+  newMemory.value = memory;
+  memoryDialogVisible.value = true;
+}
 
 // 新增相册
 const albumDialogVisible = ref(false);
@@ -215,6 +294,7 @@ const newAlbum = ref({
 });
 
 function openAlbumDialog() {
+  dialogAlbumTitle.value = "新增相册";
   newAlbum.value = {
     albumId: "album-" + Date.now(),
     albumTitle: "",
@@ -228,8 +308,39 @@ function addAlbum() {
     ElMessage.warning("相册标题不能为空");
     return;
   }
-  console.log("albums: ",albums.value);
-  albums.value.push({ ...newAlbum.value });
+
+  albums.value.push(newAlbum.value);
+  const preload = {
+    path: AchievePath.value,
+    saveContent: JSON.stringify({ albums: albums.value }),
+  };
+
+  window.electronAPI.saveAnno(preload).then((res) => {
+    if (res.success) {
+      ElMessage.success("保存成功");
+    } else {
+      console.log("res:", res);
+      ElMessage.error("保存失败");
+    }
+  });
+  fileStore.albums = albums.value;
+  albumDialogVisible.value = false;
+}
+// 修改相册
+function EditAlbum() {
+  const preload = {
+    path: AchievePath.value,
+    saveContent: JSON.stringify({ albums: [newAlbum.value] }),
+  };
+
+  window.electronAPI.saveAnno(preload).then((res) => {
+    if (res.success) {
+      ElMessage.success("保存成功");
+    } else {
+      console.log("res:", res);
+      ElMessage.error("保存失败");
+    }
+  });
   fileStore.albums = albums.value;
   albumDialogVisible.value = false;
 }
@@ -239,53 +350,13 @@ const memoryDialogVisible = ref(false);
 const newMemory = ref({});
 
 function openMemoryDialog() {
+  dialogMemoryTitle.value = "新增记忆";
   newMemory.value = {
     memoryId: Date.now(),
     memoryTitle: "",
     thumbnail: "",
-    images: [
-      {
-        rotation: 0,
-        x: 10,
-        y: 10,
-        width: 200,
-        height: 150,
-        scaleX: 1,
-        scaleY: 1,
-        image: null,
-        name: "img1",
-        draggable: true,
-        src: "/Logo2.png",
-      },
-      {
-        rotation: 0,
-        x: 250,
-        y: 200,
-        width: 200,
-        height: 150,
-        scaleX: 1,
-        scaleY: 1,
-        image: null,
-        name: "img2",
-        draggable: true,
-        src: "/Logo.png",
-      },
-    ],
-    texts: [
-      {
-        id: 1,
-        name: "text1",
-        x: 100,
-        y: 100,
-        text: "这里是注释文字",
-        fontSize: 20,
-        fill: "black",
-        rotation: 0,
-        scaleX: 1,
-        scaleY: 1,
-        draggable: true,
-      },
-    ],
+    images: [],
+    texts: [],
   };
   memoryDialogVisible.value = true;
 }
@@ -297,6 +368,42 @@ function addMemory() {
   }
   const album = albums.value[expandedIndex.value];
   album.memories.push({ ...newMemory.value });
+  const preload = {
+    path: AchievePath.value,
+    saveContent: JSON.stringify({ albums: [album] }),
+  };
+
+  window.electronAPI.saveAnno(preload).then((res) => {
+    if (res.success) {
+      ElMessage.success("保存成功");
+    } else {
+      console.log("res:", res);
+      ElMessage.error("保存失败");
+    }
+  });
+  fileStore.albums = albums.value;
+  memoryDialogVisible.value = false;
+}
+function EditMemory() {
+  const album = albums.value[expandedIndex.value];
+  album.memories = album.memories.map((m) => {
+    if (m.memoryId === newMemory.value.memoryId) return newMemory.value;
+    return m;
+  });
+  const preload = {
+    path: AchievePath.value,
+    saveContent: JSON.stringify({ albums: [album] }),
+  };
+  console.log("preload: ", preload)
+
+  window.electronAPI.saveAnno(preload).then((res) => {
+    if (res.success) {
+      ElMessage.success("保存成功");
+    } else {
+      console.log("res:", res);
+      ElMessage.error("保存失败");
+    }
+  });
   fileStore.albums = albums.value;
   memoryDialogVisible.value = false;
 }
@@ -312,22 +419,64 @@ function addMemory() {
 .album-block {
   margin-bottom: 20px;
   user-select: none;
+
+  position: relative;
+
+  overflow: visible;
+}
+
+.album-delete-container {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background-color: #fff;
+  opacity: 0;
+
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+}
+.album-block:hover .album-delete-container {
+  opacity: 1;
+}
+.album-delete {
+  width: 12px;
+  height: 12px;
+  object-fit: cover;
 }
 
 .album-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  cursor: pointer;
   font-weight: 600;
   font-size: 16px;
-  background: linear-gradient(to right, #f8f9fa, #e9ecef);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.25s ease;
+  padding: 8px 12px;
+  background-color: #f0f3f5;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
 }
 .album-header:hover {
   background-color: #dee2e6;
+}
+.album-header-delete {
+  width: 12px;
+  height: 12px;
+  object-fit: cover;
+  color: #6c757d;
+  cursor: pointer;
+}
+.album-header-delete:hover {
+  color: #343a40;
 }
 
 /* 徽章卡片布局 */
@@ -336,22 +485,13 @@ function addMemory() {
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 12px;
   padding: 10px 6px 0;
+
+  width: 90%;
 }
 
 .memory-card {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  padding: 8px 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
-}
-.memory-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* 徽章图标 */
