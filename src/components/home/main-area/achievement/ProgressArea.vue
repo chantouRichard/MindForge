@@ -10,7 +10,7 @@
       v-for="(progress, index) in progresses"
       :key="index"
     >
-      <h3 style="position: absolute; top: 16px; left: 42px">
+      <h3 style="position: absolute; top: -12px; left: 42px">
         {{ progress.title }}
       </h3>
       <img
@@ -19,54 +19,76 @@
         alt=""
         class="complete-img"
       />
-      <div
-        class="progress-bar"
-        :ref="(el) => (progressBar[index] = el)"
-        @mousedown.prevent="startDrag"
-      >
+      <div v-if="progress.visionMode == 0">
         <div
-          class="progress-fill"
-          :style="{ width: progress.totalProgress * 100 + '%' }"
-        ></div>
-
-        <!-- 里程碑位置固定，基于 targetValue -->
-        <template v-for="milestone in progress.milestones" :key="milestone.id">
+          class="progress-bar"
+          :ref="(el) => (progressBar[index] = el)"
+          @mousedown.prevent="startDrag"
+        >
           <div
-            class="milestone"
-            :style="{ left: (milestone.targetValue / 100) * 100 + '%' }"
-            :title="milestone.title"
+            class="progress-fill"
+            :style="{ width: progress.totalProgress * 100 + '%' }"
+          ></div>
+
+          <!-- 里程碑位置固定，基于 targetValue -->
+          <template
+            v-for="milestone in progress.milestones"
+            :key="milestone.id"
           >
             <div
-              class="milestone-dot"
-              :class="{
-                completed: milestone.targetValue <= progress.totalProgress,
-              }"
-            ></div>
-            <div class="milestone-label">{{ milestone.title }}</div>
-          </div>
-        </template>
+              class="milestone"
+              :style="{ left: (milestone.targetValue / 100) * 100 + '%' }"
+              :title="milestone.title"
+            >
+              <div
+                class="milestone-dot"
+                :class="{
+                  completed: milestone.targetValue <= progress.totalProgress,
+                }"
+              ></div>
+              <div class="milestone-label">{{ milestone.title }}</div>
+            </div>
+          </template>
 
-        <!-- 进度小三角跟随进度移动 -->
-        <div
-          class="progress-up-triangle"
-          :style="{ left: progress.totalProgress * 100 + '%' }"
-        ></div>
-        <div
-          class="drag-handle"
-          :style="{ left: progress.totalProgress * 100 + '%' }"
-          @mousedown.prevent="handleDragStart($event, index)"
-        ></div>
+          <!-- 进度小三角跟随进度移动 -->
+          <div
+            class="progress-up-triangle"
+            :style="{ left: progress.totalProgress * 100 + '%' }"
+          ></div>
+          <div
+            class="drag-handle"
+            :style="{ left: progress.totalProgress * 100 + '%' }"
+            @mousedown.prevent="handleDragStart($event, index)"
+          ></div>
+        </div>
+        <div class="progress-text">
+          整体进度: {{ Math.round(progress.totalProgress * 100) }}%
+        </div>
       </div>
-      <div class="progress-text">
-        整体进度: {{ Math.round(progress.totalProgress * 100) }}%
+      <div v-else>
+        <TodoList :progressId="progress.id" :todos="progress.milestones" @toggle="completeMilestone" />
       </div>
-
       <!-- 右上角操作按钮 -->
-      <div class="button-container" style="top: 4px;right: 28px;" @click="handleEdit(progress)">
-        <img class="button" :src="editIcon"/>
+      <div
+        class="button-container"
+        style="top: 4px; right: 52px"
+        @click="handleChange(progress)"
+      >
+        <img class="button" :src="changeIcon" />
       </div>
-      <div class="button-container" style="top: 4px;right: 4px;" @click="handleDelete(progress)">
-        <img class="button" :src="closeIcon"/>
+      <div
+        class="button-container"
+        style="top: 4px; right: 28px"
+        @click="handleEdit(progress)"
+      >
+        <img class="button" :src="editIcon" />
+      </div>
+      <div
+        class="button-container"
+        style="top: 4px; right: 4px"
+        @click="handleDelete(progress)"
+      >
+        <img class="button" :src="closeIcon" />
       </div>
     </div>
   </div>
@@ -168,7 +190,9 @@
 
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" v-if="submitMode == 'add'" @click="confirmAdd">确定</el-button>
+      <el-button type="primary" v-if="submitMode == 'add'" @click="confirmAdd"
+        >确定</el-button
+      >
       <el-button type="primary" v-else @click="confirmEdit">确定</el-button>
     </template>
   </el-dialog>
@@ -189,6 +213,14 @@ const dialogTitle = computed(() => {
 });
 // 右上角操作按钮函数
 const submitMode = ref("add");
+function handleChange(progress) {
+  const target = progresses.value.find(p => p.id === progress.id);
+  if (target) {
+    if(target.visionMode != null)target.visionMode = 1 - target.visionMode;
+    else target.visionMode = 0;
+  }
+}
+
 function handleEdit(progress) {
   submitMode.value = "edit";
   dialogVisible.value = true;
@@ -200,21 +232,39 @@ async function handleDelete(progress) {
     path: `${repositoryStore.recentRepositories[0].path}\\.mindforge\\我的成就.achieve`,
     outerId: props.item.id,
     innerId: progress.id,
-  }
-  window.electronAPI.deleteProgress(preload).then((res)=>{
-    if(res.success){
+  };
+  window.electronAPI.deleteProgress(preload).then((res) => {
+    if (res.success) {
       ElMessage.success("删除成功");
-      props.item.progresses = props.item.progresses.filter(p => p.id !== progress.id);
-    }
-    else{
+      props.item.progresses = props.item.progresses.filter(
+        (p) => p.id !== progress.id
+      );
+    } else {
       ElMessage.error("删除失败");
     }
-  })
+  });
 }
+import TodoList from "./progress-area/TodoList.vue";
+const completeMilestone = (milestone) => {
+  console.log("milestone: ", milestone);
+  const milestoneIndex = props.item.progresses.findIndex(
+    (p) => p.id === milestone.id
+  );
+  if (milestoneIndex !== -1) {
+    // props.item.progresses[milestoneIndex].milestones = props.item.progresses[
+    //   milestoneIndex
+    // ].milestones.map((m) => {
+    //   if (m.id === milestone.id) return milestone;
+    //   return m;
+    // });
+  }
+}
+
 import completeIcon from "../../../../assets/home/complete.svg";
 import addIcon from "../../../../assets/home/add.png";
 import editIcon from "../../../../assets/home/edit.svg";
 import closeIcon from "../../../../assets/home/close.png";
+import changeIcon from "../../../../assets/home/change.svg";
 
 const props = defineProps({
   item: Object,
@@ -342,7 +392,7 @@ const removeMilestone = (index) => {
 // 确认新增
 import { useRepositoryStore } from "../../../../store/repository";
 const repositoryStore = useRepositoryStore();
-async function confirmEdit(){
+async function confirmEdit() {
   if (!form.value.title) {
     alert("请填写标题");
     return;
@@ -472,7 +522,7 @@ const saveProgressDebounce = debounce(() => {
 
   /* 柔和阴影 */
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15),
-              inset 0 0 10px rgba(255, 255, 255, 0.05);
+    inset 0 0 10px rgba(255, 255, 255, 0.05);
 
   position: relative;
 
@@ -483,9 +533,9 @@ const saveProgressDebounce = debounce(() => {
 .progress-area:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25),
-              inset 0 0 12px rgba(255, 255, 255, 0.08);
+    inset 0 0 12px rgba(255, 255, 255, 0.08);
 }
-.button-container{
+.button-container {
   width: 24px;
   height: 24px;
 
@@ -509,10 +559,9 @@ const saveProgressDebounce = debounce(() => {
 
   object-fit: cover;
 }
-.progress-area:hover .button-container{
+.progress-area:hover .button-container {
   opacity: 1;
 }
-
 
 .complete-img {
   width: 24px;

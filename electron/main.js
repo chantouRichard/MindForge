@@ -10,6 +10,7 @@ const {
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const express = require("express");
 
 let welcomeWindow = null;
 let homeWindow = null;
@@ -17,6 +18,29 @@ let petWindow = null;
 
 const NODE_ENV = process.env.NODE_ENV;
 const isDev = !app.isPackaged;
+
+const startLocalServer = () => {
+  const app = express();
+  const PORT = 3000; // 可以自定义端口
+
+  // 提供 /pdfjs 路径下的静态文件
+  app.use("/pdfjs", express.static(path.join(__dirname, "../public/pdfjs")));
+
+  // 提供 PDF 文件接口
+  app.get("/pdf", (req, res) => {
+    const filePath = req.query.path; // 文件绝对路径
+    if (!filePath || !fs.existsSync(filePath)) {
+      return res.status(404).send("File not found");
+    }
+    res.sendFile(filePath);
+  });
+
+  app.listen(PORT, () => {
+    console.log(`Local PDF server running at http://localhost:${PORT}`);
+  });
+};
+
+startLocalServer();
 
 function createWelcomeWindow() {
   welcomeWindow = new BrowserWindow({

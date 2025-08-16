@@ -3,7 +3,6 @@
   "private": true,
   "version": "1.0.0",
   "main": "electron/main.js",
-  "type": "module",
   "build": {
     "appId": "com.mindforge.app",
     "productName": "MindForge",
@@ -50,6 +49,7 @@
     "dompurify": "^3.2.6",
     "electron-store": "^10.1.0",
     "element-plus": "^2.10.4",
+    "express": "^5.1.0",
     "html2pdf": "^0.0.11",
     "html2pdf.js": "^0.10.3",
     "jspdf-font": "^1.0.7",

@@ -2,7 +2,7 @@
   <iframe
     class="pdf-preview"
     ref="pdfIframe"
-    :src="`/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfSrc)}`"
+    :src="`http://localhost:3000/pdfjs/web/viewer.html?file=http://localhost:3000/pdf?path=${encodeURIComponent(pdfSrc)}`"
     frameborder="0"
   ></iframe>
 </template>
@@ -21,10 +21,11 @@ const props = defineProps({
 watch(
   () => props.path,
   () => {
-    console.log("文件路径变化了");
-    readContent(props.path);
+    console.log("文件路径变化了: ",props.path);
+    pdfSrc.value = props.path;
   }
 );
+pdfSrc.value = fileStore.filePath;
 
 const readContent = async (path) => {
   const result = await window.electronAPI.readFileContent(path);
@@ -40,7 +41,7 @@ const readContent = async (path) => {
     console.error("读取失败", result.error);
   }
 };
-readContent(fileStore.filePath);
+// readContent(fileStore.filePath);
 
 import { onMounted, onBeforeUnmount } from "vue";
 
